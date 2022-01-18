@@ -1,4 +1,4 @@
-import { Box, Container, CssBaseline, Link, Typography } from "@mui/material";
+import { Box, Container, Link, Typography } from "@mui/material";
 
 function Copyright() {
   return (

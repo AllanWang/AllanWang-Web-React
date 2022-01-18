@@ -5,7 +5,7 @@ import { useParams } from "react-router-dom";
 import NotFound from "./NotFound";
 
 const rawBaseUrl = "https://raw.githubusercontent.com/AllanWang/McGill-Public/dev"
-const absoluteUrlRegex = "(?:^[a-z][a-z0-9+\.-]*:|\/\/)"
+const absoluteUrlRegex = "(?:^[a-z][a-z0-9+.-]*:|//)"
 
 const supportedNotes = new Map<string, string>([
   ['comp251', "Comp-251/notes.md"],

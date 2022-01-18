@@ -1,16 +1,12 @@
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
 import InputBase from "@mui/material/InputBase";
 import { styled, alpha, useTheme } from "@mui/material/styles";
 import Toolbar from "@mui/material/Toolbar";
-import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
-import Typography from "@mui/material/Typography";
 import useScrollTrigger from '@mui/material/useScrollTrigger';
 import Logo from "./Logo";
 import Slide from "@mui/material/Slide";
-import { ReactNode } from "react";
 import { Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -102,7 +98,7 @@ function NavAppBar() {
           color: "text.primary",
           // bgcolor: "background.paper"
           // https://github.com/mui-org/material-ui/blob/dcbfc54f581dbf1c0008a8e9e578f896f06228ab/packages/mui-material/src/AppBar/AppBar.js#L35
-          bgcolor: theme.palette.mode == 'light' ? theme.palette.grey[100] : theme.palette.grey[900]
+          bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[900]
         }}>
           <Toolbar>
             <Box sx={{ px: 2 }}>

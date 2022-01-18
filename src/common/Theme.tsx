@@ -1,4 +1,4 @@
-import { createTheme, ThemeOptions } from "@mui/material/styles"
+import { createTheme } from "@mui/material/styles"
 
 // https://bareynol.github.io/mui-theme-creator/
 export let theme = createTheme({

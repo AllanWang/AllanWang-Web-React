@@ -12,7 +12,6 @@ import Header from './common/Header';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './common/Theme';
 import NotFound from './routes/NotFound';
-import Container from '@mui/material/Container';
 import { Toolbar } from '@mui/material';
 
 ReactDOM.render(
