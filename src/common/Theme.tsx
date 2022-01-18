@@ -1,6 +1,16 @@
-import { createTheme } from "@mui/material/styles"
+import { createTheme, ThemeOptions } from "@mui/material/styles"
 
-export let theme = createTheme();
+// https://bareynol.github.io/mui-theme-creator/
+export let theme = createTheme({
+  // palette: {
+  //   primary: {
+  //     light: '#fafafa',
+  //     main: '#000',
+  //     dark: '#303030',
+  //     contrastText: '#000'
+  //   }
+  // },
+});
 
 // theme = {
 //   ...theme,
@@ -26,5 +36,3 @@ export let theme = createTheme();
 //     }
 //   }
 // });
-
-// export theme;

@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import { useEffect, useState } from "react";
 import ReactMarkdown, { uriTransformer } from "react-markdown";
 import { useParams } from "react-router-dom";
@@ -54,8 +55,10 @@ function Notes(props: NotesProps) {
   };
 
   return (
-    <ReactMarkdown children={mdText} linkTarget={baseUrl}
-      transformImageUri={relativeUriTransformer} transformLinkUri={relativeUriTransformer} />
+    <Box sx={{ my: 4, mx: 4 }}>
+      <ReactMarkdown children={mdText} linkTarget={baseUrl}
+        transformImageUri={relativeUriTransformer} transformLinkUri={relativeUriTransformer} />
+    </Box>
   );
 }
 

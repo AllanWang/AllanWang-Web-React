@@ -6,7 +6,7 @@
 }
 
 %logo-path-home {
-  stroke-width: 5;
+  stroke-width: 8;
   stroke-linecap: round;
   transition: 0.3s;
 }
@@ -15,8 +15,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 
   svg {
     path {

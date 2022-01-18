@@ -11,33 +11,37 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Header from './common/Header';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './common/Theme';
+import NotFound from './routes/NotFound';
+import Container from '@mui/material/Container';
+import { Toolbar } from '@mui/material';
 
 ReactDOM.render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-        }}
-      >
-        <CssBaseline />
-        <Header />
-        <main>
-          <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '100vh',
+          }}
+        >
+          <CssBaseline />
+          <Header />
+          <Toolbar /> {/* For spacing */}
+          <main>
             <Routes>
               <Route path="/" element={<App />} />
               <Route path="notes">
                 <Route path=":id" element={<NotesRoute />} />
               </Route>
-              <Route path="*" element={<App />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </main>
-        <Footer />
-      </Box>
-    </ThemeProvider>
+          </main>
+          <Footer />
+        </Box>
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>,
   document.getElementById('root')
 );

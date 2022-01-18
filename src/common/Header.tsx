@@ -11,6 +11,8 @@ import useScrollTrigger from '@mui/material/useScrollTrigger';
 import Logo from "./Logo";
 import Slide from "@mui/material/Slide";
 import { ReactNode } from "react";
+import { Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -64,6 +66,31 @@ function HideOnScroll(props: { children: React.ReactElement<any, any> }) {
   );
 }
 
+const pages: AppBarItemProp[] = [
+  {
+    text: "Projects",
+    link: "projects"
+  },
+  {
+    text: "Notes",
+    link: "notes"
+  }
+]
+
+type AppBarItemProp = {
+  text: string,
+  link: string
+}
+
+function AppBarItem(prop: AppBarItemProp) {
+  const navigate = useNavigate();
+
+  return (
+    <Button key={prop.link} sx={{ my: 2, color: 'text.primary', display: 'block' }} onClick={() => {
+      navigate(prop.link);
+    }}>{prop.text}</Button>
+  );
+}
 
 function NavAppBar() {
   const theme = useTheme();
@@ -78,24 +105,26 @@ function NavAppBar() {
           bgcolor: theme.palette.mode == 'light' ? theme.palette.grey[100] : theme.palette.grey[900]
         }}>
           <Toolbar>
-            <Logo animated={true} logoColor="#ff00ff" />
-            {/* <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="open drawer"
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton> */}
-            <Typography
+            <Box sx={{ px: 2 }}>
+              <Logo animated={true} logoColor={theme.palette.primary.main} secondaryColor={theme.palette.text.secondary} />
+            </Box>
+
+            {/* <Typography
               variant="h6"
               noWrap
               component="div"
               sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}
             >
               MUI
-            </Typography>
+            </Typography> */}
+
+            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+              {
+                pages.map((page) => (
+                  <AppBarItem {...page} />
+                ))
+              }
+            </Box>
             <Search>
               <SearchIconWrapper>
                 <SearchIcon />
