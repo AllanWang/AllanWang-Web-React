@@ -1,0 +1,62 @@
+%logo-path-base {
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-opacity: 0.5;
+  transition: 0.3s;
+}
+
+%logo-path-home {
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: 0.3s;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  margin-bottom: 8px;
+
+  svg {
+    path {
+      @extend %logo-path-base;
+    }
+
+    // Main logo shape
+    #line1 {
+      d: path("M10,10 L38.25,90");
+    }
+    #line4 {
+      d: path("M123,10 L94.75,90");
+    }
+    #line2 {
+      d: path("M66.5,10 L38.25,90");
+    }
+    #line3 {
+      d: path("M66.5,10 L94.75,90");
+    }
+  }
+
+  &:hover {
+    svg.logo-animated-home {
+      path {
+        @extend %logo-path-home;
+      }
+
+      // House shape
+      #line1 {
+        d: path("M25,48 L25,85");
+      }
+      #line4 {
+        d: path("M108,48 L108,85");
+      }
+      #line2 {
+        d: path("M66.5,10 L10,45");
+      }
+      #line3 {
+        d: path("M66.5,10 L123,45");
+      }
+    }
+  }
+}
