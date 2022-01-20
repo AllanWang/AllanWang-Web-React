@@ -65,7 +65,7 @@ function HideOnScroll(props: { children: React.ReactElement<any, any> }) {
 const pages: AppBarItemProp[] = [
   {
     text: "Projects",
-    link: "projects"
+    link: "dev"
   },
   {
     text: "Notes",
@@ -117,7 +117,7 @@ function NavAppBar() {
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
               {
                 pages.map((page) => (
-                  <AppBarItem {...page} />
+                  <AppBarItem {...page} key={page.link}/>
                 ))
               }
             </Box>

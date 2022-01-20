@@ -13,6 +13,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './common/Theme';
 import NotFound from './routes/NotFound';
 import { Toolbar } from '@mui/material';
+import Projects from './routes/Projects';
 
 ReactDOM.render(
   <React.StrictMode>
@@ -31,6 +32,7 @@ ReactDOM.render(
           <main>
             <Routes>
               <Route path="/" element={<App />} />
+              <Route path="dev" element={<Projects />} />
               <Route path="notes">
                 <Route path=":id" element={<NotesRoute />} />
               </Route>
