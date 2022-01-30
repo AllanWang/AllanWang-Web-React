@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import NotesRoute from './routes/Notes';
@@ -14,6 +13,7 @@ import { theme } from './common/Theme';
 import NotFound from './routes/NotFound';
 import { Toolbar } from '@mui/material';
 import Projects from './routes/Projects';
+import Temp from './Temp';
 
 ReactDOM.render(
   <React.StrictMode>
@@ -31,7 +31,7 @@ ReactDOM.render(
           <Toolbar /> {/* For spacing */}
           <main>
             <Routes>
-              <Route path="/" element={<App />} />
+              <Route path="/" element={<Temp />} />
               <Route path="dev" element={<Projects />} />
               <Route path="notes">
                 <Route path=":id" element={<NotesRoute />} />
