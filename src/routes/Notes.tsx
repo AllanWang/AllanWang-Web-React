@@ -7,7 +7,9 @@ import { useParams } from "react-router-dom";
 import { Link } from 'react-router-dom';
 import NotFound from "./NotFound";
 import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
 import rehypeMathjax from 'rehype-mathjax';
+import rehypeRaw from 'rehype-raw';
 import './Notes.scss';
 
 const rawBaseUrl = "https://raw.githubusercontent.com/AllanWang/McGill-Public/dev"
@@ -50,6 +52,10 @@ function githubFullUrl(info: NoteInfo, segment: string): string {
 
 /**
  * Markdown renderer for specific notes page.
+ * 
+ * Refs
+ * https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
+ * https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
  */
 function Notes(props: NotesProps) {
   const [mdText, setMdText] = useState("");
@@ -79,8 +85,12 @@ function Notes(props: NotesProps) {
 
   return (
     <Box sx={{ my: 4, mx: 4 }}>
-      <ReactMarkdown children={mdText} linkTarget={baseUrl} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeMathjax]}
-        transformImageUri={relativeUriTransformer} transformLinkUri={relativeUriTransformer} />
+      <ReactMarkdown children={mdText}
+        linkTarget={baseUrl}
+        remarkPlugins={[remarkMath, remarkGfm]}
+        rehypePlugins={[rehypeMathjax, rehypeRaw]}
+        transformImageUri={relativeUriTransformer}
+        transformLinkUri={relativeUriTransformer} />
     </Box>
   );
 }
