@@ -10,6 +10,9 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import rehypeMathjax from 'rehype-mathjax';
 import rehypeRaw from 'rehype-raw';
+import rehypeHighlight from 'rehype-highlight';
+import ocaml from 'highlight.js/lib/languages/ocaml';
+import 'highlight.js/scss/github.scss';
 import './Notes.scss';
 
 const rawBaseUrl = "https://raw.githubusercontent.com/AllanWang/McGill-Public/dev"
@@ -88,7 +91,7 @@ function Notes(props: NotesProps) {
       <ReactMarkdown children={mdText}
         linkTarget={baseUrl}
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeMathjax, rehypeRaw]}
+        rehypePlugins={[rehypeMathjax, rehypeRaw, [rehypeHighlight, { languages: { ocaml } }]]}
         transformImageUri={relativeUriTransformer}
         transformLinkUri={relativeUriTransformer} />
     </Box>
