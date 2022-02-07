@@ -117,24 +117,30 @@ function NavAppBar() {
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
               {
                 pages.map((page) => (
-                  <AppBarItem {...page} key={page.link}/>
+                  <AppBarItem {...page} key={page.link} />
                 ))
               }
             </Box>
-            <Search>
-              <SearchIconWrapper>
-                <SearchIcon />
-              </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search…"
-                inputProps={{ 'aria-label': 'search' }}
-              />
-            </Search>
           </Toolbar>
         </AppBar>
       </HideOnScroll>
     </Box>
   );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function SearchBar() {
+  return (
+    <Search>
+      <SearchIconWrapper>
+        <SearchIcon />
+      </SearchIconWrapper>
+      <StyledInputBase
+        placeholder="Search…"
+        inputProps={{ 'aria-label': 'search' }}
+      />
+    </Search>
+  )
 }
 
 export default function Header() {

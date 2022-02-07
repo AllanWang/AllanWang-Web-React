@@ -4,8 +4,8 @@ function Copyright() {
   return (
     <Typography variant="body2" color="text.secondary">
       {'Copyright © '}
-      <Link color="inherit" href="https://github.com/AllanWang/AllanWang-Web-React" target="_blank" rel="noopener">
-        potato
+      <Link color="inherit" href="https://github.com/AllanWang" target="_blank" rel="noopener">
+        Allan Wang
       </Link>{' '}
       {new Date().getFullYear()}
       {'.'}
