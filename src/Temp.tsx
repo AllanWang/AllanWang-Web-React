@@ -2,7 +2,7 @@ import { Container, Divider, Typography } from "@mui/material";
 
 export default function Temp() {
   return (
-    <Container sx={{ py: 2 }}>
+    <Container maxWidth="md" sx={{ py: 2 }}>
       <Typography variant="h3">
         Hello World
       </Typography>

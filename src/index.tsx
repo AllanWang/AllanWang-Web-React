@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import NotesRoute from './routes/Notes';
+import { NotesIndex, NotesCourseMainRoute, NotesCourseSegmentRoute } from './routes/Notes';
 import Footer from './common/Footer';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -33,9 +33,9 @@ ReactDOM.render(
             <Routes>
               <Route path="/" element={<Temp />} />
               <Route path="dev" element={<Projects />} />
-              <Route path="notes">
-                <Route path=":id" element={<NotesRoute />} />
-              </Route>
+              <Route path="notes" element={<NotesIndex />} />
+              <Route path="notes/:courseId" element={<NotesCourseMainRoute />} />
+              <Route path="notes/:courseId/:noteId" element={<NotesCourseSegmentRoute />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
