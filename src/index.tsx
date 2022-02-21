@@ -14,6 +14,7 @@ import NotFound from './routes/NotFound';
 import { Toolbar } from '@mui/material';
 import Projects from './routes/Projects';
 import Temp from './Temp';
+import MainAnimation from './routes/MainAnimation';
 
 ReactDOM.render(
   <React.StrictMode>
@@ -32,6 +33,7 @@ ReactDOM.render(
           <main>
             <Routes>
               <Route path="/" element={<Temp />} />
+              <Route path="animation" element={<MainAnimation />} />
               <Route path="dev" element={<Projects />} />
               <Route path="notes" element={<NotesIndex />} />
               <Route path="notes/:courseId" element={<NotesCourseMainRoute />} />
