@@ -114,7 +114,7 @@ function lineData(data: { p1: PointBasic, p2: PointBasic }): LineData {
   const xMax = Math.max(x1, x2)
   const yMin = Math.min(y1, y2)
   const yMax = Math.max(y1, y2)
- 
+
   return {
     p1, p2, xMin, xMax, yMin, yMax
   }
@@ -196,14 +196,17 @@ function createPoints(): GridData {
 
   // Data
 
+  // Grid data; temporary for easier path assignment
   const pointsGrid: PointData[][] = []
   // Flattened data, where point id represents index
   const points: PointData[] = []
+  // Temp data for column
   let column: PointData[] = []
 
   let id = 0
   for (let i = 1; i <= svgPointCount; i++) {
     for (let j = 1; j <= svgPointCount; j++) {
+      // Start columns on new j
       if (j == 1) {
         column = []
         pointsGrid.push(column)
@@ -222,6 +225,7 @@ function createPoints(): GridData {
       x += rnd(-dNoise, dNoise)
       y += rnd(-dNoise, dNoise)
 
+      // Create and add data
       const data = { id, orig: { x, y } }
       column.push(data)
       points.push(data)
@@ -229,25 +233,25 @@ function createPoints(): GridData {
     }
   }
 
+  // Define paths by data indices so that it's immutable and independent of point data mutation
   const paths: number[][] = []
-  // pointsGrid.forEach(col => {
-  //   for (let i = 0; i < col.length - 1; i++) {
-  //     paths.push([col[i], col[i + 1]])
-  //   }
-  // })
+
+  function addPath(p1: PointData, p2: PointData) {
+    paths.push([p1.id, p2.id])
+  }
 
   for (let i = 0; i < svgPointCount; i++) {
     for (let j = 0; j < svgPointCount; j++) {
       // direct down
-      if (j != svgPointCount - 1) paths.push([pointsGrid[i][j].id, pointsGrid[i][j + 1].id])
+      if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i][j + 1])
       // cross column attachment
       if (i != svgPointCount - 1) {
-        paths.push([pointsGrid[i][j].id, pointsGrid[i + 1][j].id])
+        addPath(pointsGrid[i][j], pointsGrid[i + 1][j])
         // other cross attachment
         if (i % 2 == 0) {
-          if (j != svgPointCount - 1) paths.push([pointsGrid[i][j].id, pointsGrid[i + 1][j + 1].id])
+          if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
         } else {
-          if (j != 0) paths.push([pointsGrid[i][j].id, pointsGrid[i + 1][j - 1].id])
+          if (j != 0) addPath(pointsGrid[i][j], pointsGrid[i + 1][j - 1])
         }
       }
     }
