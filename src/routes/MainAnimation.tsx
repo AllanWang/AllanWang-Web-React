@@ -1,5 +1,8 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { useSpring, animated } from 'react-spring'
+import { hexToRgb, useTheme } from '@mui/material/styles';
+import { Box } from '@mui/material';
+import { useRef } from 'react';
 
 type WindowSize = {
   width: number,
@@ -20,20 +23,67 @@ function useWindowSize() {
   return size;
 }
 
+/**
+ * Convert hex to rgb if it starts with `#`
+ * 
+ * Mui function has no sanity checks for inputs, and I'm not convined that theme colors are always hex values.
+ * 
+ * https://github.com/mui/material-ui/blob/master/packages/mui-system/src/colorManipulator.js
+ * https://github.com/mui/material-ui/blob/master/packages/mui-system/src/colorManipulator.test.js
+ */
+function rgb(hex: string): string {
+  if (hex.startsWith('#')) return hexToRgb(hex)
+  return hex
+}
+
+/**
+ * Wrapper around svg animation.
+ * 
+ * Note that the svg is drawn in a 1:1 view box.
+ * Our intention here is to have this fill the viewport, which means that we'll scale the svg
+ * to the largest of width/height, then trim the necessary sides to shrink it to the view box size
+ */
 export default function MainAnimation() {
+  const containerRef = useRef<HTMLInputElement>(null);
+  console.log('container', containerRef)
   const size: WindowSize = useWindowSize();
+  const theme = useTheme();
+
+  const el = containerRef.current
+  const refWidth = size.width
+  const refHeight = size.height - (el?.offsetTop ?? 0)
+
+  const svgSize = Math.max(refWidth, refHeight)
+  const marginX = (refWidth - svgSize) / 2
+  const marginY = (refHeight - svgSize) / 2
+
+  const animationGridProps: AnimationGridProps = {
+    width: `${svgSize}px`, height: `${svgSize}px`, color: rgb(theme.palette.primary.main)
+  }
 
   return (
-    <div>
-      <p>{size.width}px / {size.height}px</p>
-      <AnimationGrid width={`${size.width}px`} height={`${size.width}px`} />
-    </div>
+    <Box ref={containerRef} sx={{
+      width: `${refWidth}px`,
+      height: `${refHeight}px`,
+      overflow: 'hidden'
+    }}>
+      {/* <p>ViewPort {size.width}px / {size.height}px; Container {refWidth}px / {refHeight}px</p> */}
+      <Box sx={{
+        marginX: `${marginX}px`,
+        marginY: `${marginY}px`,
+        width: `${svgSize}px`,
+        height: `${svgSize}px`
+      }}>
+        <AnimationGrid {...animationGridProps} />
+      </Box>
+    </Box>
   )
 }
 
 type AnimationGridProps = {
   width: string,
-  height: string
+  height: string,
+  color: string,
 }
 
 /*
@@ -41,12 +91,12 @@ type AnimationGridProps = {
  */
 class AnimationGrid extends React.Component<AnimationGridProps, GridData> {
 
-  updateState: () => void
+  updateState: (newState?: GridState) => void
 
   constructor(props: AnimationGridProps) {
     super(props);
     this.state = createPoints();
-    this.updateState = () => { this.setState(updatePoints(this.state, this.updateState)) }
+    this.updateState = (newState?: GridState) => { this.setState(updatePoints(this.state, this.updateState, newState)) }
   }
 
   componentDidMount() {
@@ -58,29 +108,58 @@ class AnimationGrid extends React.Component<AnimationGridProps, GridData> {
   render() {
     const props = this.props
     const grid = this.state
+
+    const color = props.color
+    const onRest = grid.onRest
+
     return (
-      <animated.svg onClick={() => {
-        this.updateState()
-        console.log('asdf')
-      }} viewBox={`0 0 ${svgSize} ${svgSize}`} width={props.width} height={props.height}>
-        <rect x="5%" y="5%" width="90%" height="90%" fill="#ff00ff20" />
+      <svg onClick={(e) => {
+        if (this.state.state === 'Final' && e.detail === 3) {
+          // Triple click; reshow animation
+          this.setState(createPoints())
+          setTimeout(this.updateState, 2000)
+          // this.updateState('Initial')
+        }
+      }} viewBox={`0 0 ${svgSize} ${svgSize}`}>
+        {/* <rect x="5%" y="5%" width="90%" height="90%" fill="rgba(255, 0, 255, 0.1)" /> */}
         {
-          grid.points.map(p => (<Point key={p.id} {...p} onRest={grid.onRest} />))
+          grid.points.map(p => {
+            const opacity = function () {
+              switch (p.lineState) {
+                case 'Line2':
+                case 'Line3':
+                  return opacityHigh
+                case 'Line1':
+                case 'Line4':
+                  return opacityMed
+                default: return opacityLow
+              }
+            }()
+            const pointProps = { ...p, color, opacity, onRest }
+            return (<Point key={p.id} {...pointProps} />)
+          })
         }
         {
-          grid.paths.map(([id1, id2]) => (<Line key={`${id1}:${id2}`} p1={grid.points[id1]} p2={grid.points[id2]} onRest={grid.onRest} />))
+          grid.paths.map(([id1, id2]) => {
+            const p1 = grid.points[id1]
+            const p2 = grid.points[id2]
+            const opacity = p1.lineState && p1.lineState === p2.lineState ? opacityMed : opacityLow
+            const lineProps = { p1, p2, color, opacity, onRest }
+            return (<Line key={`${id1}:${id2}`} {...lineProps} />)
+          })
         }
-      </animated.svg>
+      </svg>
     )
   }
 }
 
-function Point(props: PointData & AnimCallback) {
+function Point(props: PointData & AnimCallback & SvgStyle) {
   const point = props.draw ?? props.orig
   const animatedProps = useSpring({
     cx: point.x,
     cy: point.y,
-    fill: props.color ?? '#ff0000ff',
+    fill: props.color,
+    fillOpacity: props.opacity,
     config: { duration: props.duration ?? springAnimDuration },
     onRest: () => props.onRest?.(props.id.toString())
   })
@@ -89,7 +168,7 @@ function Point(props: PointData & AnimCallback) {
   )
 }
 
-function Line(props: LineData & AnimCallback) {
+function Line(props: LineData & AnimCallback & SvgStyle) {
   const p1 = props.p1.draw ?? props.p1.orig
   const p2 = props.p2.draw ?? props.p2.orig
 
@@ -98,7 +177,8 @@ function Line(props: LineData & AnimCallback) {
     y1: p1.y,
     x2: p2.x,
     y2: p2.y,
-    stroke: props.color ?? '#ff00ff80',
+    stroke: props.color,
+    strokeOpacity: props.opacity,
     config: { duration: props.duration ?? springAnimDuration },
     onRest: () => props.onRest?.(`${props.p1.id}:${props.p2.id}`)
   })
@@ -114,7 +194,8 @@ type AnimCallback = {
 
 type SvgStyle = {
   readonly duration?: number | null
-  readonly color?: string | null
+  readonly color: string
+  readonly opacity: number
 }
 
 type PointBasic = {
@@ -126,7 +207,9 @@ type PointData = {
   readonly id: number,
   readonly orig: PointBasic,
   readonly draw?: PointBasic | null
-} & SvgStyle
+  // Indication of logo portion, if the point is a part of one of the lines
+  readonly lineState?: LineState
+}
 
 type LineBasic = {
   readonly p1: PointBasic,
@@ -140,9 +223,11 @@ type LineBasic = {
 type LineData = {
   readonly p1: PointData,
   readonly p2: PointData,
-} & SvgStyle
+}
 
-type GridState = 'Initial' | 'Line1' | 'Line2' | 'Line3' | 'Line4' | 'Final'
+type GridState = 'Initial' | LineState | 'Final'
+
+type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
 
 type GridData = {
   readonly state: GridState
@@ -151,11 +236,19 @@ type GridData = {
   readonly lines: LineBasic[]
 } & AnimCallback
 
+/*
+ * Constants
+ */
+
 const svgSize = 100
-const svgPointCount = 19
-const noiseRange = svgSize / (svgPointCount + 1) * 0.4 // Multiplier slightly under half to avoid overlap
-const logoPointDistanceSquared = 100
+const svgPointCount = 26
+const noiseRange = svgSize / (svgPointCount - 1) * 0.3 // Multiplier needs to be under 0.5 to avoid overlap
+const logoPointDistanceSquared = 10
 const springAnimDuration = 300
+
+const opacityLow = 0.25
+const opacityMed = 0.6
+const opacityHigh = 1
 
 function lineData(data: { p1: PointBasic, p2: PointBasic }): LineBasic {
   const { p1, p2 } = data
@@ -213,24 +306,25 @@ function closestPoint(point: PointBasic, line: LineBasic): PointBasic {
   return { x, y }
 }
 
-function updatePoints(fullData: GridData, updateState: () => void): GridData {
+function updatePoints(fullData: GridData, updateState: () => void, newState?: GridState): GridData {
 
   // Don't use fullData after this
   // We do not intend on propagating anim callbacks
   const { onRest, ...data } = fullData
 
   // Next state
-  const state: GridState = function () {
+  const state: GridState | null = newState ?? function () {
     switch (data.state) {
       case 'Initial': return 'Line1'
       case 'Line1': return 'Line2'
       case 'Line2': return 'Line3'
       case 'Line3': return 'Line4'
       case 'Line4': return 'Final'
-      default: return 'Initial'
+      default: return null
     }
   }()
 
+  if (!state) return data // Should never happen
   if (data.state == state) return data
 
   // Line to update
@@ -244,18 +338,31 @@ function updatePoints(fullData: GridData, updateState: () => void): GridData {
     }
   }()
 
-  if (!updateLine) return { ...data, state }
+  // No action
+  if (!updateLine && state === 'Final') return { ...data, state }
 
-  const points: PointData[] = data.points.map(point => {
-    const p = point.orig
-    // We only modify points within the range of the line's min and max coords
-    if (p.x < updateLine.xMin || p.x > updateLine.xMax || p.y < updateLine.yMin || p.y > updateLine.yMax) return point
-    const anchor = closestPoint(p, updateLine)
-    const distance = distanceSquared(p, anchor)
-    if (distance > logoPointDistanceSquared) return point
-    const draw = transformPoint(p, anchor, (logoPointDistanceSquared - distance) / logoPointDistanceSquared)
-    return { ...point, draw }
-  })
+  let points: PointData[]
+
+  if (updateLine) {
+    // state is a line state based on updateLine logic
+    const lineState = state as LineState
+    points = data.points.map(point => {
+      const p = point.orig
+      // We only modify points within the range of the line's min and max coords
+      if (p.x < updateLine.xMin || p.x > updateLine.xMax || p.y < updateLine.yMin || p.y > updateLine.yMax) return point
+      const anchor = closestPoint(p, updateLine)
+      const distance = distanceSquared(p, anchor)
+      if (distance > logoPointDistanceSquared) return point
+      const draw = transformPoint(p, anchor, (logoPointDistanceSquared - distance) / logoPointDistanceSquared)
+      return { ...point, draw, lineState }
+    })
+  } else {
+    // No update line -> remove all custom draw data & reset all logo points
+    points = data.points.map(point => {
+      const { draw, lineState, ...rest } = point
+      return rest
+    })
+  }
 
   let onRestCalled = false
 
@@ -274,9 +381,8 @@ function updatePoints(fullData: GridData, updateState: () => void): GridData {
 }
 
 function createPoints(): GridData {
-  console.log('create points', Date.now())
-  const xOffset = svgSize / (svgPointCount + 1)
-  const yOffset = svgSize / (svgPointCount + 1)
+  const xOffset = svgSize / (svgPointCount - 1)
+  const yOffset = svgSize / (svgPointCount - 1)
 
   // Logo constants
   const logoSegW = 10
@@ -295,10 +401,10 @@ function createPoints(): GridData {
   let column: PointData[] = []
 
   let id = 0
-  for (let i = 1; i <= svgPointCount; i++) {
-    for (let j = 1; j <= svgPointCount; j++) {
+  for (let i = 0; i < svgPointCount; i++) {
+    for (let j = 0; j < svgPointCount; j++) {
       // Start columns on new j
-      if (j == 1) {
+      if (j == 0) {
         column = []
         pointsGrid.push(column)
       }
@@ -340,9 +446,9 @@ function createPoints(): GridData {
         addPath(pointsGrid[i][j], pointsGrid[i + 1][j])
         // other cross attachment
         if (i % 2 == 0) {
-          if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
-        } else {
           if (j != 0) addPath(pointsGrid[i][j], pointsGrid[i + 1][j - 1])
+        } else {
+          if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
         }
       }
     }
@@ -354,8 +460,6 @@ function createPoints(): GridData {
     lineData({ p1: { x: logoOffsetX + logoSegW * 2, y: logoOffsetY }, p2: { x: logoOffsetX + logoSegW * 3, y: logoOffsetY + logoSegH } }),
     lineData({ p1: { x: logoOffsetX + logoSegW * 3, y: logoOffsetY + logoSegH }, p2: { x: logoOffsetX + logoSegW * 4, y: logoOffsetY } }),
   ]
-
-  console.log('create points done', Date.now())
 
   return { state: 'Initial', points, paths, lines }
 }
