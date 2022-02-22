@@ -18,9 +18,7 @@ const logoSize = svgSize - Math.min(logoOffsetX, logoOffsetY) * 2
 
 const noiseRangeMultiplier = 0.5 // Multiplier needs to be under 1 to avoid overlap
 const noiseChance = 0.5 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
-const logoNoiseFactor = 0.5 // Factor to reduce noise when in logo range [0, 1]
 const logoPointDistanceSquared = 20
-const logoTransformGravity = 1 // How close logo transformations should go to anchor points [0, 1] 
 
 const opacityLow = 0.2
 const opacityMed = 0.4
@@ -121,15 +119,8 @@ function noisePoint(point: PointData, info: GridInfo): PointData {
   if (point.lineState) return point
   // Noise chance not met
   if (Math.random() > noiseChance) return point
-  let dNoise = info.noiseRange * noiseRangeMultiplier
-
+  const dNoise = info.noiseRange * noiseRangeMultiplier
   let { x, y } = point.orig
-
-  if (logoTransformGravity !== 1 && x > logoOffsetX && x < svgSize - logoOffsetX && y > logoOffsetY && y < svgSize - logoOffsetY) {
-    // Less noise within logo range
-    dNoise *= logoNoiseFactor
-  }
-
   x += rnd(-dNoise, dNoise)
   y += rnd(-dNoise, dNoise)
   const draw = { x, y }
@@ -274,19 +265,14 @@ export function updatePoints(data: GridData, newState?: GridState): GridData {
     const logoPoint: (point: PointData) => PointData | null = (point) => {
       // Point already used
       if (point.lineState) return null
-      // For the sake of variation, we allow the use of draw points
-      // We purposely reduce noise for potential logo points so it doesn't look too bad
-      // This does not apply if the gravity is 1
-      const p = logoTransformGravity === 1 ? point.orig : point.draw ?? point.orig;
+      const p = point.orig
       if (!isCandidateForLine(p, updateLine, data)) return null
       // Anchor point along logo line
       const anchor = closestPoint(p, updateLine, data)
       const distance = distanceSquared(p, anchor)
       // If distance is too far, we ignore the transformation
       if (distance > logoPointDistanceSquared) return null
-      let factor = (logoPointDistanceSquared - distance) / logoPointDistanceSquared
-      factor = transformNum(factor, logoTransformGravity, 1)
-      const draw = transformPoint(p, anchor, factor)
+      const draw = anchor
       // Draw anchor point instead
       return { ...point, draw, lineState }
     }
