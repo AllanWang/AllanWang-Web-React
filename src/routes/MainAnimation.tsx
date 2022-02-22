@@ -1,8 +1,9 @@
-import React, { useLayoutEffect, useState } from 'react';
-import { useSpring, animated } from 'react-spring'
+import { useLayoutEffect, useState } from 'react';
+import { animated, useSprings, AnimationProps, SpringConfig } from 'react-spring'
 import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
+import './MainAnimation.scss';
 
 type WindowSize = {
   width: number,
@@ -45,7 +46,6 @@ function rgb(hex: string): string {
  */
 export default function MainAnimation() {
   const containerRef = useRef<HTMLInputElement>(null);
-  console.log('container', containerRef)
   const size: WindowSize = useWindowSize();
   const theme = useTheme();
 
@@ -74,128 +74,102 @@ export default function MainAnimation() {
         width: `${svgSize}px`,
         height: `${svgSize}px`
       }}>
-        <AnimationGrid {...animationGridProps} />
+        <AnimationGrid2 {...animationGridProps} />
       </Box>
     </Box>
   )
 }
 
 type AnimationGridProps = {
-  width: string,
-  height: string,
-  color: string,
+  width: string
+  height: string
+  color: string
 }
 
-/*
- * A full component is needed as we need to be able to get the latest state in our callback, as opposed to the last one at the time of the pure component render
- */
-class AnimationGrid extends React.Component<AnimationGridProps, GridData> {
-
-  updateState: (newState?: GridState) => void
-
-  constructor(props: AnimationGridProps) {
-    super(props);
-    this.state = createPoints();
-    this.updateState = (newState?: GridState) => { this.setState(updatePoints(this.state, this.updateState, newState)) }
-  }
-
-  componentDidMount() {
-    // https://stackoverflow.com/a/56767883/4407321
-    // Relevant in pure function, but equivalent is done here with components
-    setTimeout(this.updateState, 2000)
-  }
-
-  render() {
-    const props = this.props
-    const grid = this.state
-
-    const color = props.color
-    const onRest = grid.onRest
-
-    return (
-      <svg onClick={(e) => {
-        if (this.state.state === 'Final' && e.detail === 3) {
-          // Triple click; reshow animation
-          this.setState(createPoints())
-          setTimeout(this.updateState, 2000)
-          // this.updateState('Initial')
-        }
-      }} viewBox={`0 0 ${svgSize} ${svgSize}`}>
-        {/* <rect x="5%" y="5%" width="90%" height="90%" fill="rgba(255, 0, 255, 0.1)" /> */}
-        {
-          grid.points.map(p => {
-            const opacity = function () {
-              switch (p.lineState) {
-                case 'Line2':
-                case 'Line3':
-                  return opacityHigh
-                case 'Line1':
-                case 'Line4':
-                  return opacityMed
-                default: return opacityLow
-              }
-            }()
-            const pointProps = { ...p, color, opacity, onRest }
-            return (<Point key={p.id} {...pointProps} />)
-          })
-        }
-        {
-          grid.paths.map(([id1, id2]) => {
-            const p1 = grid.points[id1]
-            const p2 = grid.points[id2]
-            const opacity = p1.lineState && p1.lineState === p2.lineState ? opacityMed : opacityLow
-            const lineProps = { p1, p2, color, opacity, onRest }
-            return (<Line key={`${id1}:${id2}`} {...lineProps} />)
-          })
-        }
-      </svg>
-    )
-  }
+type PointAnimatedProps = {
+  cx: number
+  cy: number
+  fillOpacity: number
 }
 
-function Point(props: PointData & AnimCallback & SvgStyle) {
-  const point = props.draw ?? props.orig
-  const animatedProps = useSpring({
-    cx: point.x,
-    cy: point.y,
-    fill: props.color,
-    fillOpacity: props.opacity,
-    config: { duration: props.duration ?? springAnimDuration },
-    onRest: () => props.onRest?.(props.id.toString())
-  })
-  return (
-    <animated.circle {...animatedProps} r={0.1} />
-  )
+type LineAnimatedProps = {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  strokeOpacity: number
 }
 
-function Line(props: LineData & AnimCallback & SvgStyle) {
-  const p1 = props.p1.draw ?? props.p1.orig
-  const p2 = props.p2.draw ?? props.p2.orig
+type SvgAnimatedProps = PointAnimatedProps | LineAnimatedProps
 
-  const animatedProps = useSpring({
-    x1: p1.x,
-    y1: p1.y,
-    x2: p2.x,
-    y2: p2.y,
-    stroke: props.color,
-    strokeOpacity: props.opacity,
-    config: { duration: props.duration ?? springAnimDuration },
-    onRest: () => props.onRest?.(`${props.p1.id}:${props.p2.id}`)
-  })
+function AnimationGrid2(props: AnimationGridProps) {
+  const [grid, setGrid] = useState(createPoints)
+
+  function svgAnimatedProps(index: number): SvgAnimatedProps {
+    if (index < grid.points.length) {
+      // Point animation
+      const point = grid.points[index]
+      const p = point.draw ?? point.orig
+      const opacity = function () {
+        switch (point.lineState) {
+          case 'Line2':
+          case 'Line3':
+            return opacityHigh
+          case 'Line1':
+          case 'Line4':
+            return opacityMed
+          default: return opacityLow
+        }
+      }()
+      return {
+        cx: p.x,
+        cy: p.y,
+        fillOpacity: opacity,
+      }
+    }
+    // Line animation
+    const [p1Id, p2Id] = grid.paths[index - grid.points.length]
+    const point1 = grid.points[p1Id]
+    const point2 = grid.points[p2Id]
+    const p1 = point1.draw ?? point1.orig
+    const p2 = point2.draw ?? point2.orig
+    const opacity = point1.lineState && point1.lineState === point2.lineState ? opacityMed : opacityLow
+    return {
+      x1: p1.x,
+      y1: p1.y,
+      x2: p2.x,
+      y2: p2.y,
+      strokeOpacity: opacity,
+    }
+  }
+
+  // https://react-spring.io/common/props
+  function springContents(index: number): SvgAnimatedProps & AnimationProps {
+    return {
+      ...svgAnimatedProps(index),
+      // delay: 500,
+      config: { duration: springAnimDuration }
+    }
+  }
+
+  const springCount = grid.points.length + grid.paths.length
+
+  // Create a spri;ng for every point and line
+  const [springs,  /* api */] = useSprings<SvgAnimatedProps>(springCount, springContents, [grid])
 
   return (
-    <animated.line {...animatedProps} strokeWidth={0.05} />
+    <animated.svg style={{ ['--svg-color' as any]: props.color }} className="svg-grid" viewBox={`0 0 ${svgSize} ${svgSize}`} onClick={() => {
+      const newGrid = grid.state !== 'Line4' ? updatePoints(grid) : createPoints()
+      setGrid(newGrid)
+    }}>
+      {
+        springs.map((styles: {}, i) => {
+          if (i < grid.points.length) return <animated.circle key={i} {...styles} />
+          return <animated.line key={i} {...styles} />
+        })
+      }
+    </animated.svg>
   )
-}
-
-type AnimCallback = {
-  readonly onRest?: (id: string) => void
-}
-
-type SvgStyle = {
-  readonly duration?: number | null
-  readonly color: string
-  readonly opacity: number
 }
 
 type PointBasic = {
@@ -220,11 +194,6 @@ type LineBasic = {
   readonly yMax: number,
 }
 
-type LineData = {
-  readonly p1: PointData,
-  readonly p2: PointData,
-}
-
 type GridState = 'Initial' | LineState | 'Final'
 
 type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
@@ -234,7 +203,7 @@ type GridData = {
   readonly points: PointData[]
   readonly paths: number[][]
   readonly lines: LineBasic[]
-} & AnimCallback
+}
 
 /*
  * Constants
@@ -306,11 +275,7 @@ function closestPoint(point: PointBasic, line: LineBasic): PointBasic {
   return { x, y }
 }
 
-function updatePoints(fullData: GridData, updateState: () => void, newState?: GridState): GridData {
-
-  // Don't use fullData after this
-  // We do not intend on propagating anim callbacks
-  const { onRest, ...data } = fullData
+function updatePoints(data: GridData, newState?: GridState): GridData {
 
   // Next state
   const state: GridState | null = newState ?? function () {
@@ -325,7 +290,7 @@ function updatePoints(fullData: GridData, updateState: () => void, newState?: Gr
   }()
 
   if (!state) return data // Should never happen
-  if (data.state == state) return data
+  if (data.state === state) return data
 
   // Line to update
   const updateLine = function () {
@@ -364,20 +329,7 @@ function updatePoints(fullData: GridData, updateState: () => void, newState?: Gr
     })
   }
 
-  let onRestCalled = false
-
-  // Basic animation callback
-  // We should really get a count (n) of mutated elements, and act once onRest is called n times.
-  // However, as all durations are currently the same, we will settle for the first callback and make this idempotent.
-  const animCallback: AnimCallback = {
-    onRest: () => {
-      if (onRestCalled) return
-      onRestCalled = true
-      setTimeout(updateState, 500)
-    }
-  }
-
-  return { ...data, state, points, ...animCallback }
+  return { ...data, state, points }
 }
 
 function createPoints(): GridData {
@@ -404,13 +356,13 @@ function createPoints(): GridData {
   for (let i = 0; i < svgPointCount; i++) {
     for (let j = 0; j < svgPointCount; j++) {
       // Start columns on new j
-      if (j == 0) {
+      if (j === 0) {
         column = []
         pointsGrid.push(column)
       }
       let x = i * xOffset;
       let y = j * yOffset;
-      if (i % 2 == 1) y += yOffset / 2;
+      if (i % 2 === 1) y += yOffset / 2;
       // Noise
       let dNoise = noiseRange
 
@@ -434,21 +386,22 @@ function createPoints(): GridData {
   const paths: number[][] = []
 
   function addPath(p1: PointData, p2: PointData) {
-    paths.push([p1.id, p2.id])
+    paths.push([p1.id, p2.id, id])
+    id++
   }
 
   for (let i = 0; i < svgPointCount; i++) {
     for (let j = 0; j < svgPointCount; j++) {
       // direct down
-      if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i][j + 1])
+      if (j !== svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i][j + 1])
       // cross column attachment
-      if (i != svgPointCount - 1) {
+      if (i !== svgPointCount - 1) {
         addPath(pointsGrid[i][j], pointsGrid[i + 1][j])
         // other cross attachment
-        if (i % 2 == 0) {
-          if (j != 0) addPath(pointsGrid[i][j], pointsGrid[i + 1][j - 1])
+        if (i % 2 === 0) {
+          if (j !== 0) addPath(pointsGrid[i][j], pointsGrid[i + 1][j - 1])
         } else {
-          if (j != svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
+          if (j !== svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
         }
       }
     }

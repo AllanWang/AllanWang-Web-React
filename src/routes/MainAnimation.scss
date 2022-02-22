@@ -1,0 +1,10 @@
+svg.svg-grid {
+  circle {
+    fill: var(--svg-color);
+    r: 0.1;
+  }
+  line {
+    stroke: var(--svg-color);
+    stroke-width: 0.05;
+  }
+}
