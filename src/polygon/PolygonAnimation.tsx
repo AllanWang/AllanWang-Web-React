@@ -4,7 +4,7 @@ import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
-import { AnimationGridProps, createPoints, lineStateOpacity, SvgAnimatedProps, svgSize, updatePoints } from './PolygonAnimationData';
+import { AnimationGridProps, createGrid, lineStateOpacity, SvgAnimatedProps, svgSize, updatePoints } from './PolygonAnimationData';
 
 const springAnimDuration = 300
 
@@ -88,7 +88,7 @@ export default function PolygonAnimation() {
 }
 
 function AnimationGrid(props: AnimationGridProps) {
-  const [grid, setGrid] = useState(createPoints)
+  const [grid, setGrid] = useState(createGrid)
 
   function svgAnimatedProps(index: number): SvgAnimatedProps {
     if (index < grid.points.length) {

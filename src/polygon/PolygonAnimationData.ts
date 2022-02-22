@@ -1,24 +1,29 @@
+import Delaunator from 'delaunator';
+
 /*
  * Constants
  */
 
 export const svgSize = 100
-const svgPointCount = 20 // Since logo is center aligned, this number should be even so that points aren't shared between middle two lines
-const noiseRange = svgSize / (svgPointCount - 1) * 0.2 // Multiplier needs to be under 0.5 to avoid overlap
-const noiseChance = 0.3 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
-const logoNoiseFactor = 0.5 // Factor to reduce noise when in logo range [0, 1]
-const logoPointDistanceSquared = 100
-const logoTransformGravity = 0.8 // How close logo transformations should go to anchor points [0, 1] 
 
 // Logo constants
-const logoSegW = 10
+const logoSegW = 7
 const logoSegH = logoSegW * 2.83186 // Slope of logo edge
 
 const logoOffsetX = svgSize / 2 - logoSegW * 2
 const logoOffsetY = (svgSize - logoSegH) / 2
 
-const opacityLow = 0.25
-const opacityMed = 0.35
+// max(size - offsetX * 2, size - offsetY * 2)
+const logoSize = svgSize - Math.min(logoOffsetX, logoOffsetY) * 2
+
+const noiseRangeMultiplier = 0.5 // Multiplier needs to be under 1 to avoid overlap
+const noiseChance = 0.5 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
+const logoNoiseFactor = 0.5 // Factor to reduce noise when in logo range [0, 1]
+const logoPointDistanceSquared = 20
+const logoTransformGravity = 1 // How close logo transformations should go to anchor points [0, 1] 
+
+const opacityLow = 0.2
+const opacityMed = 0.4
 const opacityHigh = 1
 
 /*
@@ -34,7 +39,7 @@ export type AnimationGridProps = {
 /**
  * Animated elements for point
  */
- type PointAnimatedProps = {
+type PointAnimatedProps = {
   cx: number
   cy: number
   fillOpacity: number
@@ -46,26 +51,26 @@ export type AnimationGridProps = {
  * Note that positional info is available in the point animated props, 
  * so we don't have to recompute them
  */
- type LineAnimatedProps = {
+type LineAnimatedProps = {
   strokeOpacity: number
 }
 
 export type SvgAnimatedProps = PointAnimatedProps | LineAnimatedProps
 
- type PointBasic = {
+type PointBasic = {
   readonly x: number,
   readonly y: number
 }
 
- type PointData = {
-  readonly id: number,
+type PointData = {
+  readonly id?: number,
   readonly orig: PointBasic,
   readonly draw?: PointBasic | null
   // Indication of logo portion, if the point is a part of one of the lines
   readonly lineState?: LineState
 }
 
- type LineBasic = {
+type LineBasic = {
   readonly p1: PointBasic,
   readonly p2: PointBasic,
   readonly xMin: number,
@@ -74,16 +79,26 @@ export type SvgAnimatedProps = PointAnimatedProps | LineAnimatedProps
   readonly yMax: number,
 }
 
- type GridState = 'Initial' | LineState | 'Final'
+type GridState = 'Initial' | LineState | 'Final'
 
- type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
+type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
 
- type GridData = {
+type GridPointData = {
+  points: PointBasic[]
+  info: GridInfo
+}
+
+type GridInfo = {
+  readonly minDelta: number
+  readonly noiseRange: number
+}
+
+type GridData = {
   readonly state: GridState
   readonly points: PointData[]
   readonly paths: number[][]
   readonly lines: LineBasic[]
-}
+} & GridInfo
 
 
 export function lineStateOpacity(lineState?: LineState | null): number {
@@ -101,16 +116,16 @@ export function lineStateOpacity(lineState?: LineState | null): number {
 /**
  * Given point, apply some noise
  */
- function noisePoint(point: PointData): PointData {
+function noisePoint(point: PointData, info: GridInfo): PointData {
   // No modifications if part of logo
   if (point.lineState) return point
   // Noise chance not met
   if (Math.random() > noiseChance) return point
-  let dNoise = noiseRange
+  let dNoise = info.noiseRange * noiseRangeMultiplier
 
   let { x, y } = point.orig
 
-  if (x > logoOffsetX && x < svgSize - logoOffsetX && y > logoOffsetY && y < svgSize - logoOffsetY) {
+  if (logoTransformGravity !== 1 && x > logoOffsetX && x < svgSize - logoOffsetX && y > logoOffsetY && y < svgSize - logoOffsetY) {
     // Less noise within logo range
     dNoise *= logoNoiseFactor
   }
@@ -164,12 +179,30 @@ function transformPoint(start: PointBasic, end: PointBasic, factor: number): Poi
 }
 
 /**
+ * Checks if {@link point} can potentially transform onto {@link line}
+ * 
+ * True if coord is within min max bounds of line, plus some buffer
+ */
+function isCandidateForLine(point: PointBasic, line: LineBasic, info: GridInfo): boolean {
+  const buffer = info.minDelta * 0.2;
+  return point.x > line.xMin - buffer
+    && point.x < line.xMax + buffer
+    && point.y < line.yMax + buffer
+    && point.y > line.yMin - buffer
+}
+
+/**
  * Returns closest point on {@link line} relative to {@link point}.
  * 
  * Result is on the full line, not just the segment bounded by the line's two ends.
+ * To produce a better logo, we'd like to ensure points match to the ends of the line.
+ * As a result, we add some logic in the beginning if the point is close enough
  */
-function closestPoint(point: PointBasic, line: LineBasic): PointBasic {
+function closestPoint(point: PointBasic, line: LineBasic, info: GridInfo): PointBasic {
   const { p1, p2 } = line
+  const threshold = info.minDelta / 2
+  if (Math.abs(p1.x - point.x) < threshold && Math.abs(p1.y - point.y) < threshold) return p1;
+  if (Math.abs(p2.x - point.x) < threshold && Math.abs(p2.y - point.y) < threshold) return p2;
   const x1 = p1.x
   const y1 = p1.y
   const x2 = p2.x
@@ -243,11 +276,11 @@ export function updatePoints(data: GridData, newState?: GridState): GridData {
       if (point.lineState) return null
       // For the sake of variation, we allow the use of draw points
       // We purposely reduce noise for potential logo points so it doesn't look too bad
-      const p = point.draw ?? point.orig;
-      // We only modify points within the range of the line's min and max coords
-      if (p.x < updateLine.xMin || p.x > updateLine.xMax || p.y < updateLine.yMin || p.y > updateLine.yMax) return null
+      // This does not apply if the gravity is 1
+      const p = logoTransformGravity === 1 ? point.orig : point.draw ?? point.orig;
+      if (!isCandidateForLine(p, updateLine, data)) return null
       // Anchor point along logo line
-      const anchor = closestPoint(p, updateLine)
+      const anchor = closestPoint(p, updateLine, data)
       const distance = distanceSquared(p, anchor)
       // If distance is too far, we ignore the transformation
       if (distance > logoPointDistanceSquared) return null
@@ -258,89 +291,82 @@ export function updatePoints(data: GridData, newState?: GridState): GridData {
       return { ...point, draw, lineState }
     }
 
-    points = data.points.map(point => logoPoint(point) ?? noisePoint(point))
+    points = data.points.map(point => logoPoint(point) ?? noisePoint(point, data))
   } else {
     // No update line -> remove lineState
     points = data.points.map(point => {
       if (point.lineState) {
         // Remove lineState *and* draw
         const { draw, lineState, ...rest } = point
-        return noisePoint(rest)
+        return noisePoint(rest, data)
       }
       // Keep draw state and add optional noise
-      return noisePoint(point)
+      return noisePoint(point, data)
     })
   }
 
   return { ...data, state, points }
 }
 
-export function createPoints(): GridData {
-  const xOffset = svgSize / (svgPointCount - 1)
-  const yOffset = svgSize / (svgPointCount - 1)
-
-  // Data
-
-  // Grid data; temporary for easier path assignment
-  const pointsGrid: PointData[][] = []
-  // Flattened data, where point id represents index
-  const points: PointData[] = []
-  // Temp data for column
-  let column: PointData[] = []
-
-  let id = 0
-  for (let i = 0; i < svgPointCount; i++) {
-    for (let j = 0; j < svgPointCount; j++) {
-      // Start columns on new j
-      if (j === 0) {
-        column = []
-        pointsGrid.push(column)
-      }
-      let x = i * xOffset;
-      let y = j * yOffset;
-      if (i % 2 === 1) y += yOffset / 2;
-      // Noise
-      if (Math.random() < noiseChance) {
-        let dNoise = noiseRange
-        if (x > logoOffsetX && x < svgSize - logoOffsetX && y > logoOffsetY && y < svgSize - logoOffsetY) {
-          // Less noise within logo range
-          dNoise *= logoNoiseFactor
-        }
-
-        x += rnd(-dNoise, dNoise)
-        y += rnd(-dNoise, dNoise)
-      }
-
-      // Create and add data
-      const data = { id, orig: { x, y } }
-      column.push(data)
-      points.push(data)
-      id++
+/**
+ * Generates square grid of points, where each edge is size {@link rowCount}
+ */
+function createPointsUniform(rowCount: number = 20): GridPointData {
+  const delta = svgSize / (rowCount - 1)
+  const points: PointBasic[] = []
+  for (let i = 0; i < rowCount; i++) {
+    for (let j = 0; j < rowCount; j++) {
+      let x = i * delta
+      let y = j * delta
+      if (i % 2 == 0) y += delta / 2
+      points.push({ x, y })
     }
   }
+  const info = {
+    minDelta: delta,
+    noiseRange: delta * noiseRangeMultiplier
+  }
+  return { points, info }
+}
 
-  // Define paths by data indices so that it's immutable and independent of point data mutation
+/**
+ * Create points for grid data.
+ * 
+ * This is nothing but the point coords.
+ */
+function createPoints(): GridPointData {
+  return createPointsUniform()
+}
+
+/**
+ * Create grid to render animation.
+ * 
+ * This includes adding relevant metadata for UI, adding noise for variation, etc
+ */
+export function createGrid(): GridData {
+
+  const pointInfo = createPoints()
+  const info = pointInfo.info
+
+  const points: PointData[] = pointInfo.points
+    .map((p: PointBasic) => ({ orig: p }))
+    .map(p => noisePoint(p, info))
+
   const paths: number[][] = []
 
-  function addPath(p1: PointData, p2: PointData) {
-    paths.push([p1.id, p2.id, id])
-    id++
+  const delaunay = Delaunator.from(points, (p: PointData) => p.orig.x, (p: PointData) => p.orig.y)
+
+  // https://mapbox.github.io/delaunator/
+
+  function nextHalfEdge(e: number): number {
+    return (e % 3 == 2) ? e - 2 : e + 1
   }
 
-  for (let i = 0; i < svgPointCount; i++) {
-    for (let j = 0; j < svgPointCount; j++) {
-      // direct down
-      if (j !== svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i][j + 1])
-      // cross column attachment
-      if (i !== svgPointCount - 1) {
-        addPath(pointsGrid[i][j], pointsGrid[i + 1][j])
-        // other cross attachment
-        if (i % 2 === 0) {
-          if (j !== 0) addPath(pointsGrid[i][j], pointsGrid[i + 1][j - 1])
-        } else {
-          if (j !== svgPointCount - 1) addPath(pointsGrid[i][j], pointsGrid[i + 1][j + 1])
-        }
-      }
+  for (let e = 0; e < delaunay.triangles.length; e++) {
+    if (e > delaunay.halfedges[e]) {
+      const p = delaunay.triangles[e];
+      const q = delaunay.triangles[nextHalfEdge(e)];
+      paths.push([p, q])
     }
   }
 
@@ -351,5 +377,5 @@ export function createPoints(): GridData {
     lineData({ p1: { x: logoOffsetX + logoSegW * 3, y: logoOffsetY + logoSegH }, p2: { x: logoOffsetX + logoSegW * 4, y: logoOffsetY } }),
   ]
 
-  return { state: 'Initial', points, paths, lines }
+  return { state: 'Initial', points, paths, lines, ...info }
 }
