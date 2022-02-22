@@ -14,46 +14,15 @@ const logoOffsetX = svgSize / 2 - logoSegW * 2
 const logoOffsetY = (svgSize - logoSegH) / 2
 
 // max(size - offsetX * 2, size - offsetY * 2)
-const logoSize = svgSize - Math.min(logoOffsetX, logoOffsetY) * 2
+// const logoSize = svgSize - Math.min(logoOffsetX, logoOffsetY) * 2
 
 const noiseRangeMultiplier = 0.5 // Multiplier needs to be under 1 to avoid overlap
 const noiseChance = 0.5 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
 const logoPointDistanceSquared = 20
 
-const opacityLow = 0.2
-const opacityMed = 0.4
-const opacityHigh = 1
-
 /*
  * Types
  */
-
-export type AnimationGridProps = {
-  width: string
-  height: string
-  color: string
-}
-
-/**
- * Animated elements for point
- */
-type PointAnimatedProps = {
-  cx: number
-  cy: number
-  fillOpacity: number
-}
-
-/**
- * Partial animated elements from line
- * 
- * Note that positional info is available in the point animated props, 
- * so we don't have to recompute them
- */
-type LineAnimatedProps = {
-  strokeOpacity: number
-}
-
-export type SvgAnimatedProps = PointAnimatedProps | LineAnimatedProps
 
 type PointBasic = {
   readonly x: number,
@@ -77,9 +46,9 @@ type LineBasic = {
   readonly yMax: number,
 }
 
-type GridState = 'Initial' | LineState | 'Final'
+export type GridState = 'Initial' | LineState | 'Final'
 
-type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
+export type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
 
 type GridPointData = {
   points: PointBasic[]
@@ -97,19 +66,6 @@ type GridData = {
   readonly paths: number[][]
   readonly lines: LineBasic[]
 } & GridInfo
-
-
-export function lineStateOpacity(lineState?: LineState | null): number {
-  switch (lineState) {
-    case 'Line2':
-    case 'Line3':
-      return opacityHigh
-    case 'Line1':
-    case 'Line4':
-      return opacityMed
-    default: return opacityLow
-  }
-}
 
 /**
  * Given point, apply some noise
@@ -161,13 +117,13 @@ function rnd(min: number, max: number): number {
   return transformNum(Math.random(), min, max)
 }
 
-function transformPoint(start: PointBasic, end: PointBasic, factor: number): PointBasic {
-  if (factor < 0) factor = 0
-  else if (factor > 1) factor = 1
-  const x = start.x + factor * (end.x - start.x)
-  const y = start.y + factor * (end.y - start.y)
-  return { x, y }
-}
+// function transformPoint(start: PointBasic, end: PointBasic, factor: number): PointBasic {
+//   if (factor < 0) factor = 0
+//   else if (factor > 1) factor = 1
+//   const x = start.x + factor * (end.x - start.x)
+//   const y = start.y + factor * (end.y - start.y)
+//   return { x, y }
+// }
 
 /**
  * Checks if {@link point} can potentially transform onto {@link line}
@@ -226,8 +182,8 @@ export function updatePoints(data: GridData, newState?: GridState): GridData {
       case 'Line1': return 'Line2'
       case 'Line2': return 'Line3'
       case 'Line3': return 'Line4'
-      case 'Line4': return 'Initial'
-      // case 'Line4': return 'Final'
+      // case 'Line4': return 'Initial'
+      case 'Line4': return 'Final'
       // case 'Final': return 'Initial'
       default: return null
     }
@@ -297,14 +253,14 @@ export function updatePoints(data: GridData, newState?: GridState): GridData {
 /**
  * Generates square grid of points, where each edge is size {@link rowCount}
  */
-function createPointsUniform(rowCount: number = 20): GridPointData {
+function createPointsUniform(rowCount: number = 25): GridPointData {
   const delta = svgSize / (rowCount - 1)
   const points: PointBasic[] = []
   for (let i = 0; i < rowCount; i++) {
     for (let j = 0; j < rowCount; j++) {
       let x = i * delta
       let y = j * delta
-      if (i % 2 == 0) y += delta / 2
+      if (i % 2 === 0) y += delta / 2
       points.push({ x, y })
     }
   }
@@ -345,7 +301,7 @@ export function createGrid(): GridData {
   // https://mapbox.github.io/delaunator/
 
   function nextHalfEdge(e: number): number {
-    return (e % 3 == 2) ? e - 2 : e + 1
+    return (e % 3 === 2) ? e - 2 : e + 1
   }
 
   for (let e = 0; e < delaunay.triangles.length; e++) {

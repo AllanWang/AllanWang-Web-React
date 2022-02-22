@@ -1,16 +1,22 @@
-import { useLayoutEffect, useState } from 'react';
-import { animated, useSprings, AnimationProps } from 'react-spring'
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
-import { AnimationGridProps, createGrid, lineStateOpacity, SvgAnimatedProps, svgSize, updatePoints } from './PolygonAnimationData';
+import { createGrid, svgSize, updatePoints } from './PolygonAnimationData';
 
-const springAnimDuration = 300
+const springAnimDuration = 600
 
 type WindowSize = {
   width: number,
   height: number
+}
+
+type AnimationGridProps = {
+  width: string
+  height: string
+  color: string
+  colorAccent: string
 }
 
 function useWindowSize() {
@@ -65,7 +71,10 @@ export default function PolygonAnimation() {
   const marginY = (refHeight - svgSize) / 2
 
   const animationGridProps: AnimationGridProps = {
-    width: `${svgSize}px`, height: `${svgSize}px`, color: rgb(theme.palette.primary.main)
+    width: `${svgSize}px`,
+    height: `${svgSize}px`,
+    color: rgb(theme.palette.text.secondary),
+    colorAccent: rgb(theme.palette.primary.main)
   }
 
   return (
@@ -90,57 +99,78 @@ export default function PolygonAnimation() {
 function AnimationGrid(props: AnimationGridProps) {
   const [grid, setGrid] = useState(createGrid)
 
-  function svgAnimatedProps(index: number): SvgAnimatedProps {
-    if (index < grid.points.length) {
-      // Point animation
-      const point = grid.points[index]
-      const p = point.draw ?? point.orig
-      return {
-        cx: p.x,
-        cy: p.y,
-        fillOpacity: lineStateOpacity(point.lineState),
-      }
-    }
-    // Line animation
-    const [p1Id, p2Id] = grid.paths[index - grid.points.length]
-    const point1 = grid.points[p1Id]
-    const point2 = grid.points[p2Id]
-    const lineState = point1.lineState === point2.lineState ? point1.lineState : null
-    return {
-      strokeOpacity: lineStateOpacity(lineState),
-    }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGrid(updatePoints(grid))
+    }, springAnimDuration * 3);
+    return () => clearTimeout(timer);
+  }, [grid])
+
+  const style: {} = {
+    '--svg-color': props.color,
+    '--svg-accent-color': props.colorAccent,
+    '--svg-anim-duration': `${springAnimDuration / 1000}s`
   }
-
-  // https://react-spring.io/common/props
-  function springContents(index: number): SvgAnimatedProps & AnimationProps {
-    return {
-      ...svgAnimatedProps(index),
-      // delay: 500,
-      config: { duration: springAnimDuration }
-    }
-  }
-
-  const springCount = grid.points.length + grid.paths.length
-
-  // Create a spri;ng for every point and line
-  const [springs,  /* api */] = useSprings<SvgAnimatedProps>(springCount, springContents, [grid])
 
   return (
-    <animated.svg style={{ ['--svg-color' as any]: props.color }} className="svg-grid" viewBox={`0 0 ${svgSize} ${svgSize}`} onClick={() => {
-      setGrid(updatePoints(grid))
+    <svg style={style} className="svg-grid" viewBox={`0 0 ${svgSize} ${svgSize}`} onClick={(e) => {
+      if (grid.state === 'Final' && e.detail === 1) {
+        setGrid(updatePoints(grid, 'Initial'))
+      }
     }}>
       {
-        springs.map((styles, i) => {
-          if (i < grid.points.length) return <animated.circle key={i} {...styles} />
-          const [p1Id, p2Id] = grid.paths[i - grid.points.length]
-          const p1 = springs[p1Id]
-          const p2 = springs[p2Id]
+        grid.points.map((point, i) => {
+          const p = point.draw ?? point.orig
+          const circleProps = {
+            key: `circle${i}`,
+            className: point.lineState ?? undefined,
+            cx: p.x,
+            cy: p.y,
+          }
 
-          const lineStyles = { ...styles, x1: p1.cx, y1: p1.cy, x2: p2.cx, y2: p2.cy }
-
-          return <animated.line key={i} {...lineStyles} />
+          return <circle {...circleProps} />
         })
       }
-    </animated.svg>
+      {
+        grid.paths.map((line, i) => {
+          const [p1Id, p2Id] = line
+          const point1 = grid.points[p1Id]
+          const point2 = grid.points[p2Id]
+          const p1 = point1.draw ?? point1.orig
+          const p2 = point2.draw ?? point2.orig
+          const lineState = point1.lineState === point2.lineState ? point1.lineState : null
+
+          const lineProps = {
+            key: `line${i}`,
+            className: lineState ?? undefined,
+            d: `M${p1.x} ${p1.y} L${p2.x} ${p2.y}`,
+          }
+
+          return <path {...lineProps} />
+        })
+      }
+    </svg>
   )
+
+  // Create a spring for every point and line
+  // const [springs,  /* api */] = useSprings<SvgAnimatedProps>(springCount, springContents, [grid])
+
+  // return (
+  //   <animated.svg style={style} className="svg-grid" viewBox={`0 0 ${svgSize} ${svgSize}`} onClick={() => {
+  //     setGrid(updatePoints(grid))
+  //   }}>
+  //     {
+  //       springs.map((styles, i) => {
+  //         if (i < grid.points.length) return <animated.circle key={i} {...styles} />
+  //         const [p1Id, p2Id] = grid.paths[i - grid.points.length]
+  //         const p1 = springs[p1Id]
+  //         const p2 = springs[p2Id]
+
+  //         const lineStyles = { ...styles, x1: p1.cx, y1: p1.cy, x2: p2.cx, y2: p2.cy }
+
+  //         return <animated.line key={i} {...lineStyles} />
+  //       })
+  //     }
+  //   </animated.svg>
+  // )
 }

@@ -1,11 +1,70 @@
+@mixin logoInner {
+  &.Line2,
+  &.Line3 {
+    @content;
+  }
+}
+
+@mixin logoOuter {
+  &.Line1,
+  &.Line4 {
+    @content;
+  }
+}
+
+@mixin logo {
+  @include logoInner {
+    @content;
+  }
+
+  @include logoOuter {
+    @content;
+  }
+}
+
 svg.svg-grid {
-  content-visibility: auto;
+  // content-visibility: auto;
+
   circle {
+    @extend %animatable;
     fill: var(--svg-color);
     r: 0.1;
+    opacity: 0.5;
+
+    @include logoInner {
+      fill: var(--svg-accent-color);
+    }
+
+    // @include logo {
+      // r: 0.15;
+    // }
   }
-  line {
+  line,
+  path {
+    // visibility: hidden;
+    opacity: 0.05;
+    @extend %animatable;
     stroke: var(--svg-color);
-    stroke-width: 0.05;
+    stroke-width: 0.1;
+
+    @include logoInner {
+      stroke: var(--svg-accent-color);
+    }
+    @include logo {
+      stroke-width: 0.2;
+    }
   }
+
+  circle,
+  line,
+  path {
+    @include logo {
+      opacity: 1;
+    }
+  }
+}
+
+%animatable {
+  transition: var(--svg-anim-duration) ease-in;
+  -webkit-transition: var(--svg-anim-duration);
 }
