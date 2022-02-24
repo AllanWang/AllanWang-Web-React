@@ -24,12 +24,12 @@ const logoPointDistanceSquared = 20
  * Types
  */
 
-type PointBasic = {
+export type PointBasic = {
   readonly x: number,
   readonly y: number
 }
 
-type PointData = {
+export type PointData = {
   readonly id?: number,
   readonly orig: PointBasic,
   readonly draw?: PointBasic | null
@@ -37,7 +37,7 @@ type PointData = {
   readonly lineState?: LineState
 }
 
-type LineBasic = {
+export type LineBasic = {
   readonly p1: PointBasic,
   readonly p2: PointBasic,
   readonly xMin: number,

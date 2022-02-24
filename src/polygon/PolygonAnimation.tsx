@@ -3,7 +3,7 @@ import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
-import { createGrid, updatePoints } from './PolygonAnimationData';
+import { createGrid, PointBasic, PointData, updatePoints } from './PolygonAnimationData';
 
 const autoProgress = false
 // const springAnimDuration = 2000
@@ -15,6 +15,8 @@ type WindowSize = {
 }
 
 type AnimationGridProps = {
+  readonly marginXRatio: number,
+  readonly marginYRatio: number,
   readonly width: string
   readonly height: string
   readonly color: string
@@ -47,6 +49,13 @@ function rgb(hex: string): string {
   return hex
 }
 
+function drawPoint(point: PointData): PointBasic {
+  let { x, y } = point.draw ?? point.orig
+  x = Math.round(x * 100) / 100
+  y = Math.round(y * 100) / 100
+  return { x, y }
+}
+
 /**
  * Wrapper around svg animation.
  * 
@@ -73,6 +82,8 @@ export default function PolygonAnimation() {
   const marginY = (refHeight - svgSizePx) / 2
 
   const animationGridProps: AnimationGridProps = {
+    marginXRatio: -marginX / svgSizePx,
+    marginYRatio: -marginY / svgSizePx,
     width: `${svgSizePx}px`,
     height: `${svgSizePx}px`,
     color: rgb(theme.palette.text.secondary),
@@ -116,6 +127,18 @@ function AnimationGrid(props: AnimationGridProps) {
     '--svg-anim-duration': `${springAnimDuration / 1000}s`
   }
 
+  const marginBoundX = props.marginXRatio * grid.svgSize - 5
+  const marginBoundY = props.marginYRatio * grid.svgSize - 5
+
+  console.log(marginBoundX, marginBoundY)
+
+  function shouldDraw(point: PointBasic): boolean {
+    return point.x > marginBoundX
+      && grid.svgSize - point.x > marginBoundX
+      && point.y > marginBoundY
+      && grid.svgSize - point.y > marginBoundY
+  }
+
   return (
     <svg style={style} className="svg-grid" viewBox={`0 0 ${grid.svgSize} ${grid.svgSize}`} onClick={(e) => {
       if (grid.state === 'Final' && e.detail === 1) {
@@ -126,7 +149,10 @@ function AnimationGrid(props: AnimationGridProps) {
     }}>
       {
         grid.points.map((point, i) => {
-          const p = point.draw ?? point.orig
+          const p = drawPoint(point)
+
+          if (!shouldDraw(p)) return null
+
           const circleProps = {
             key: `circle${i}`,
             className: point.lineState ?? undefined,
@@ -142,8 +168,11 @@ function AnimationGrid(props: AnimationGridProps) {
           const [p1Id, p2Id] = line
           const point1 = grid.points[p1Id]
           const point2 = grid.points[p2Id]
-          const p1 = point1.draw ?? point1.orig
-          const p2 = point2.draw ?? point2.orig
+          const p1 = drawPoint(point1)
+          const p2 = drawPoint(point2)
+
+          if (!shouldDraw(p1) && !shouldDraw(p2)) return null
+
           const lineState = point1.lineState === point2.lineState ? point1.lineState : null
 
           const lineProps = {
