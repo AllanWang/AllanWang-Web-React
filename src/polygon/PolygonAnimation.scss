@@ -22,6 +22,14 @@
   }
 }
 
+/*
+ * Ideas
+ * - change data to base, noise, mouse delta; track deltas on mouse over 
+ * - keep points when animating to logo; create invisible ones that show up afterwards
+ * - on that note, maybe don't move lines over, or fade the lines out and somehow allow for translucent strokes
+ * -- todo that, consider pre computing which points are relevant, and then drawing all logo point edges with a single path?
+ */
+
 svg.svg-grid {
   // content-visibility: auto;
 
