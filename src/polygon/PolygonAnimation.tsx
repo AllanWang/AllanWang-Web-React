@@ -1,24 +1,24 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useState } from 'react';
 import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
-import { createGrid, svgSize, updatePoints } from './PolygonAnimationData';
+import { createGrid, updatePoints } from './PolygonAnimationData';
 
 const autoProgress = false
-const springAnimDuration = 2000
-// const springAnimDuration = 600
+// const springAnimDuration = 2000
+const springAnimDuration = 600
 
 type WindowSize = {
-  width: number,
-  height: number
+  readonly width: number,
+  readonly height: number
 }
 
 type AnimationGridProps = {
-  width: string
-  height: string
-  color: string
-  colorAccent: string
+  readonly width: string
+  readonly height: string
+  readonly color: string
+  readonly colorAccent: string
 }
 
 function useWindowSize() {
@@ -68,13 +68,13 @@ export default function PolygonAnimation() {
   // const refWidth = size.width - (el?.offsetLeft ?? 0) - 20
   const refHeight = size.height - (el?.offsetTop ?? 0)
 
-  const svgSize = Math.max(refWidth, refHeight)
-  const marginX = (refWidth - svgSize) / 2
-  const marginY = (refHeight - svgSize) / 2
+  const svgSizePx = Math.max(refWidth, refHeight)
+  const marginX = (refWidth - svgSizePx) / 2
+  const marginY = (refHeight - svgSizePx) / 2
 
   const animationGridProps: AnimationGridProps = {
-    width: `${svgSize}px`,
-    height: `${svgSize}px`,
+    width: `${svgSizePx}px`,
+    height: `${svgSizePx}px`,
     color: rgb(theme.palette.text.secondary),
     colorAccent: rgb(theme.palette.primary.main)
   }
@@ -89,8 +89,8 @@ export default function PolygonAnimation() {
       <Box sx={{
         marginX: `${marginX}px`,
         marginY: `${marginY}px`,
-        width: `${svgSize}px`,
-        height: `${svgSize}px`
+        width: `${svgSizePx}px`,
+        height: `${svgSizePx}px`
       }}>
         <AnimationGrid {...animationGridProps} />
       </Box>
@@ -99,15 +99,16 @@ export default function PolygonAnimation() {
 }
 
 function AnimationGrid(props: AnimationGridProps) {
-  const [grid, setGrid] = useState(createGrid)
+
+  const [grid, dispatchGrid] = useReducer(updatePoints, null, createGrid)
 
   useEffect(() => {
     if (!autoProgress) return
     const timer = setTimeout(() => {
-      setGrid(updatePoints(grid))
+      dispatchGrid(null)
     }, springAnimDuration * 3);
     return () => clearTimeout(timer);
-  }, [grid])
+  }, [grid.state])
 
   const style: {} = {
     '--svg-color': props.color,
@@ -116,11 +117,11 @@ function AnimationGrid(props: AnimationGridProps) {
   }
 
   return (
-    <svg style={style} className="svg-grid" viewBox={`0 0 ${svgSize} ${svgSize}`} onClick={(e) => {
+    <svg style={style} className="svg-grid" viewBox={`0 0 ${grid.svgSize} ${grid.svgSize}`} onClick={(e) => {
       if (grid.state === 'Final' && e.detail === 1) {
-        setGrid(updatePoints(grid, 'Initial'))
+        dispatchGrid('Initial')
       } else if (!autoProgress) {
-        setGrid(updatePoints(grid))
+        dispatchGrid(null)
       }
     }}>
       {

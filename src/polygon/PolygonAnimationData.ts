@@ -4,7 +4,7 @@ import Delaunator from 'delaunator';
  * Constants
  */
 
-export const svgSize = 100
+const svgSize = 100
 
 // Logo constants
 const logoSegW = 7
@@ -51,16 +51,17 @@ export type GridState = 'Initial' | LineState | 'Final'
 export type LineState = 'Line1' | 'Line2' | 'Line3' | 'Line4'
 
 type GridPointData = {
-  points: PointBasic[]
-  info: GridInfo
+  readonly points: PointBasic[]
+  readonly info: GridInfo
 }
 
 type GridInfo = {
   readonly minDelta: number
   readonly noiseRange: number
+  readonly svgSize: number
 }
 
-type GridData = {
+export type GridData = {
   readonly state: GridState
   readonly points: PointData[]
   readonly paths: number[][]
@@ -173,7 +174,7 @@ function closestPoint(point: PointBasic, line: LineBasic, info: GridInfo): Point
  * Updates will also add some noise to non logo points, to add variation. We do this for each update so keep our noise hits low
  * and to avoid a lot of transformations in any singular update
  */
-export function updatePoints(data: GridData, newState?: GridState): GridData {
+export function updatePoints(data: GridData, newState: GridState | null): GridData {
 
   // Next state
   const state: GridState | null = newState ?? function () {
@@ -266,7 +267,8 @@ function createPointsUniform(rowCount: number = 25): GridPointData {
   }
   const info = {
     minDelta: delta,
-    noiseRange: delta * noiseRangeMultiplier
+    noiseRange: delta * noiseRangeMultiplier,
+    svgSize
   }
   return { points, info }
 }
