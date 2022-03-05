@@ -114,7 +114,7 @@ function NavAppBar() {
               MUI
             </Typography> */}
 
-            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+            <Box sx={{ flexGrow: 1, display: 'flex' }}>
               {
                 pages.map((page) => (
                   <AppBarItem {...page} key={page.link} />
