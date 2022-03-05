@@ -28,7 +28,7 @@ ReactDOM.render(
         >
           <CssBaseline />
           <Header />
-          <Toolbar /> {/* For spacing */}
+          <Toolbar id="scroll_to_top" /> {/* For spacing and scroll to top */}
           <main>
             <Routes>
               <Route path="/" element={<Main />} />
