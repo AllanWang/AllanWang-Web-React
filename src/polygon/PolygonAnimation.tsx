@@ -50,10 +50,13 @@ function rgb(hex: string): string {
 }
 
 function drawPoint(point: PointData): PointBasic {
-  let { x, y } = point.draw ?? point.orig
-  x = Math.round(x * 100) / 100
-  y = Math.round(y * 100) / 100
-  return { x, y }
+  const { logo } = point
+  if (logo) {
+    if (logo.anchored) {
+      return logo.anchor
+    }
+  }
+  return point.draw ?? point.orig
 }
 
 /**
@@ -157,6 +160,8 @@ function AnimationGrid(props: AnimationGridProps) {
   }
 
   function Point(point: PointData) {
+    if (point.ignore) return null
+
     const p = drawPoint(point)
 
     if (!shouldDraw(p)) return null
@@ -165,7 +170,7 @@ function AnimationGrid(props: AnimationGridProps) {
 
     const circleProps = {
       key,
-      className: key,
+      className: key.concat(point.logo?.anchored ? ' anchored' : ''),
       // className: point.lineState ?? undefined,
       cx: p.x,
       cy: p.y,
@@ -175,6 +180,8 @@ function AnimationGrid(props: AnimationGridProps) {
   }
 
   function Line(line: LineRef) {
+    if (line.ignore) return null
+
     const { p1Id, p2Id } = line
     const point1 = grid.points[p1Id]
     const point2 = grid.points[p2Id]
@@ -218,24 +225,6 @@ function AnimationGrid(props: AnimationGridProps) {
       }
       {
         Array.from(grid.logoLines.values(), LogoLine)
-      }
-      {/* {
-        grid.lines.map((l, i) => {
-          const { p1, p2 } = l
-          const lineProps = {
-            key: `test-line-${i}`,
-            d: `M${p1.x} ${p1.y} L${p2.x} ${p2.y}`,
-            className: 'test'
-          }
-
-          return <path {...lineProps} />
-        })
-      } */}
-      {
-        grid.debug?.map((data, i) => {
-          const path = data.map(id => drawPoint(grid.points[id]))
-          return Path(`debug-${i}`, path, 'debug')
-        })
       }
     </svg>
   )

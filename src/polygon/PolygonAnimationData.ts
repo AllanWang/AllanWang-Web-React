@@ -38,8 +38,14 @@ export type PointLogoTransformation = {
 
 export type LogoLine = {
   readonly lineState: LineState
-  readonly anchored: boolean
   readonly points: PointLogoTransformation[]
+  readonly anchored?: boolean
+}
+
+type PointLogoInfo = {
+  readonly lineState: LineState
+  readonly anchor: PointBasic
+  readonly anchored?: boolean
 }
 
 export type PointData = {
@@ -47,15 +53,14 @@ export type PointData = {
   readonly orig: PointBasic
   readonly draw?: PointBasic | null
   // Indication of logo portion, if the point is a part of one of the lines
-  readonly logo?: {
-    readonly lineState: LineState
-    readonly anchor: PointBasic
-  }
+  readonly logo?: PointLogoInfo
+  readonly ignore?: boolean
 }
 
 export type LineRef = {
   readonly p1Id: number
   readonly p2Id: number
+  readonly ignore?: boolean
 }
 
 export type LineData = {
@@ -93,13 +98,19 @@ export type GridData = {
   readonly state: GridState
   readonly points: PointData[]
   readonly paths: LineRef[]
-  readonly lines: LineData[]
+  // readonly lines: LineData[]
   readonly logoLines: Map<string, LogoLine>
-  readonly debug?: number[][]
 } & GridInfo
 
 function transformMap<K, V, R>(map: Map<K, V>, transform: (key: K, value: V) => R): Map<K, R> {
   return new Map(Array.from(map.entries(), ([k, v]) => [k, transform(k, v)]))
+}
+
+function roundPoint(point: PointBasic): PointBasic {
+  let { x, y } = point
+  x = Math.round(x * 100) / 100
+  y = Math.round(y * 100) / 100
+  return { x, y }
 }
 
 /**
@@ -112,7 +123,7 @@ function noisePoint(point: PointData, info: GridInfo): PointData {
   let { x, y } = point.orig
   x += rnd(-dNoise, dNoise)
   y += rnd(-dNoise, dNoise)
-  const draw = { x, y }
+  const draw = roundPoint({ x, y })
   return { ...point, draw }
 }
 
@@ -178,8 +189,8 @@ function closestPointId(point: PointBasic, candidates: PointData[], info: GridIn
   const oy = point.y
   for (const p of candidates) {
     const { x, y } = p.orig
-    if (Math.abs(x - ox) > info.minDelta + info.noiseRange) continue
-    if (Math.abs(y - oy) > info.minDelta + info.noiseRange) continue
+    if (Math.abs(x - ox) > info.minDelta + info.noiseRange * 2) continue
+    if (Math.abs(y - oy) > info.minDelta + info.noiseRange * 2) continue
     const pd2 = distanceSquared(point, p.orig)
     if (pd2 < d2) {
       d2 = pd2
@@ -213,7 +224,7 @@ function anchorPoint(point: PointBasic, line: LineData, info: GridInfo): PointBa
   const a = (dy * (y3 - y1) + dx * (x3 - x1)) / det
   let x = x1 + a * dx
   let y = y1 + a * dy
-  return { x, y }
+  return roundPoint({ x, y })
 }
 
 function inLogoBounds(point: PointBasic): boolean {
@@ -247,82 +258,46 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
   if (!state) return data // Should never happen
   if (data.state === state) return data
 
-  const points = data.points.map(point => {
-    const { draw, logo, ...rest } = point // TODO update
-    return noisePoint(rest, data)
-  })
+  let { points, logoLines } = data
 
   if (state === 'Initial') {
-    // Remove all anchors
-    const logoLines = transformMap(data.logoLines, (_k, v) => ({ ...v, anchored: false }))
-    return { ...data, state, logoLines, points }
+    // Remove all anchored flags
+    logoLines = transformMap(data.logoLines, (_k, v) => {
+      const { anchored, ...rest } = v
+      return rest
+    })
+    points = points.map(point => {
+      const { logo, ...rest } = point
+      if (logo) {
+        const { anchored, ...restLogo } = logo
+        return { ...rest, logo: restLogo }
+      }
+      return point
+    })
+  } else {
+    const updateLine = data.logoLines.get(state)
+    if (updateLine) {
+      // Anchor line
+      logoLines = transformMap(data.logoLines, (_k, v) => v.lineState === updateLine.lineState ? { ...v, anchored: true } : v)
+      // Anchor points used in logo
+      points = points.map(point => {
+        if (point.logo?.lineState === state) {
+          return { ...point, logo: { ...point.logo, anchored: true } }
+        }
+        return point
+      })
+    }
   }
 
-  const updateLine = data.logoLines.get(state)
-  if (!updateLine) return { ...data, state, points }
-
-  // Copy and update
-  const logoLines = transformMap(data.logoLines, (_k, v) => v)
-  logoLines.set(updateLine.lineState, { ...updateLine, anchored: true })
+  // Apply noise to non anchored points
+  points = points.map(point => {
+    if (point.logo?.anchored) {
+      return point
+    }
+    return noisePoint(point, data)
+  })
 
   return { ...data, state, logoLines, points }
-
-  // Line to update
-  // const updateLine = function () {
-  //   switch (state) {
-  //     case 'Line1': return data.lines[0]
-  //     case 'Line2': return data.lines[1]
-  //     case 'Line3': return data.lines[2]
-  //     case 'Line4': return data.lines[3]
-  //     default: return null
-  //   }
-  // }()
-
-  // // No action
-  // if (!updateLine && state === 'Final') return { ...data, state }
-
-  // let points: PointData[]
-
-  // if (updateLine) {
-  //   // state is a line state based on updateLine logic
-  //   const lineState = state as LineState
-
-  //   /**
-  //    * Attempts to transform point to new logo point.
-  //    * 
-  //    * If nonnull, point is used in updateLine transformation.
-  //    * If null, point is either out of range or already used.
-  //    */
-  //   const logoPoint: (point: PointData) => PointData | null = (point) => {
-  //     // Point already used
-  //     if (point.lineState) return null
-  //     const p = point.orig
-  //     if (!isCandidateForLine(p, updateLine, data)) return null
-  //     // Anchor point along logo line
-  //     const anchor = anchorPoint(p, updateLine, data)
-  //     const distance = distanceSquared(p, anchor)
-  //     // If distance is too far, we ignore the transformation
-  //     if (distance > logoPointDistanceSquared) return null
-  //     const draw = anchor
-  //     // Draw anchor point instead
-  //     return { ...point, draw, lineState }
-  //   }
-
-  //   points = data.points.map(point => logoPoint(point) ?? noisePoint(point, data))
-  // } else {
-  //   // No update line -> remove lineState
-  //   points = data.points.map(point => {
-  //     if (point.lineState) {
-  //       // Remove lineState *and* draw
-  //       const { draw, lineState, ...rest } = point
-  //       return noisePoint(rest, data)
-  //     }
-  //     // Keep draw state and add optional noise
-  //     return noisePoint(point, data)
-  //   })
-  // }
-
-  // return { ...data, state, points }
 }
 
 /**
@@ -375,11 +350,11 @@ export function createGrid(): GridData {
   const pointInfo = createPoints()
   const info = pointInfo.info
 
-  const points: PointData[] = pointInfo.points
-    .map((p: PointBasic, id: number) => ({ id, orig: p }))
+  let points: PointData[] = pointInfo.points
+    .map((p: PointBasic, id: number) => ({ id, orig: roundPoint(p) }))
     .map(p => noisePoint(p, info))
 
-  const paths: LineRef[] = []
+  let paths: LineRef[] = []
 
   const delaunay = Delaunator.from(points, (p: PointData) => p.orig.x, (p: PointData) => p.orig.y)
 
@@ -393,7 +368,7 @@ export function createGrid(): GridData {
     if (e > delaunay.halfedges[e]) {
       const p1Id = delaunay.triangles[e];
       const p2Id = delaunay.triangles[nextHalfEdge(e)];
-      paths.push({p1Id, p2Id})
+      paths.push({ p1Id, p2Id })
     }
   }
 
@@ -413,7 +388,7 @@ export function createGrid(): GridData {
     return distanceSquared(p, p2)
   }
 
-  const debug: number[] = []
+  const pointsInLogo: Map<number, PointLogoInfo> = new Map()
 
 
   /**
@@ -445,6 +420,9 @@ export function createGrid(): GridData {
   function nextTransformationPoint(source: PointTransformationIntermediate | null, line: LineData): PointTransformationIntermediate | null {
     if (source == null) return null
     const candidates = neighbours(source.id)
+      // Cannot use the same point twice
+      .filter(pid => !pointsInLogo.has(pid))
+      // Point must be closer to destination to avoid infinite loops
       .filter(pid => {
         const pd2 = dS(pid, line.p2)
         return pd2 < source.d2
@@ -474,6 +452,16 @@ export function createGrid(): GridData {
     const transformations: PointLogoTransformation[] = []
     const firstPoint = closestPointId(line.p1, points, info)
 
+    function add(info: PointLogoTransformation) {
+      transformations.push(info)
+      // While path points cannot reuse the same point,
+      // The starting points can, as they will both translate to the same anchor
+      // Therefore, we have the possibility of clashing points,
+      // and we want to prioritize the earlier line transformations.
+      if (!pointsInLogo.has(info.id))
+        pointsInLogo.set(info.id, { lineState, anchor: info.anchor })
+    }
+
     let curr = {
       ...firstPoint,
       d2: dS(firstPoint.id, line.p2),
@@ -483,16 +471,15 @@ export function createGrid(): GridData {
     let next = nextTransformationPoint(curr, line)
 
     while (next) {
-      transformations.push({ id: curr.id, anchor: curr.anchor })
+      add({ id: curr.id, anchor: curr.anchor })
       curr = next
       next = nextTransformationPoint(curr, line)
     }
 
     // Anchor last point to line p2
-    transformations.push({ id: curr.id, anchor: line.p2 })
+    add({ id: curr.id, anchor: line.p2 })
     return {
       lineState,
-      anchored: false,
       points: transformations
     }
   }
@@ -505,6 +492,20 @@ export function createGrid(): GridData {
   ]
 
   const logoLines = new Map(logoLineData.map(([k, v]) => [k, transformationLine(k, lineData(v))]))
+  // const lines = logoLineData.map(([, v]) => lineData(v))
 
-  return { state: 'Initial', points, paths, lines: logoLineData.map(([, v]) => lineData(v)), logoLines, ...info, debug: [debug] }
+  // Clean up; remove points and paths used in logo to avoid overdraw
+
+  points = points.map(p => {
+    const info = pointsInLogo.get(p.id)
+    return info ? { ...p, logo: info } : p
+  })
+  paths = paths.map(p => {
+    const p1LineState = pointsInLogo.get(p.p1Id)?.lineState
+    const p2LineState = pointsInLogo.get(p.p2Id)?.lineState
+    const ignore = p1LineState && p1LineState === p2LineState
+    return ignore ? { ...p, ignore } : p
+  })
+
+  return { state: 'Initial', points, paths, logoLines, ...info }
 }
