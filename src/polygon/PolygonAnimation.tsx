@@ -5,9 +5,8 @@ import { useRef } from 'react';
 import './PolygonAnimation.scss';
 import { createGrid, LineRef, LogoLine, PointBasic, PointData, updatePoints } from './PolygonAnimationData';
 
-const autoProgress = false
-const springAnimDuration = 2000
-// const springAnimDuration = 600
+const autoProgress = true
+const springAnimDuration = 1200
 
 type WindowSize = {
   readonly width: number,
@@ -118,9 +117,11 @@ function AnimationGrid(props: AnimationGridProps) {
 
   useEffect(() => {
     if (!autoProgress) return
-    const timer = setTimeout(() => {
+    // Interval used as final state results in no state change
+    // We still want timer to cancel in case user requests an animation restart
+    const timer = setInterval(() => {
       dispatchGrid(null)
-    }, springAnimDuration * 3);
+    }, springAnimDuration * 2);
     return () => clearTimeout(timer);
   }, [grid.state])
 
@@ -171,7 +172,6 @@ function AnimationGrid(props: AnimationGridProps) {
     const circleProps = {
       key,
       className: key.concat(point.logo?.anchored ? ' anchored' : ''),
-      // className: point.lineState ?? undefined,
       cx: p.x,
       cy: p.y,
     }
@@ -189,8 +189,6 @@ function AnimationGrid(props: AnimationGridProps) {
     const p2 = drawPoint(point2)
 
     if (!shouldDraw(p1) && !shouldDraw(p2)) return null
-
-    // const lineState = point1.logo?.lineState === point2.logo?.lineState ? point1.logo?.lineState : null
 
     const key = `line-${p1Id}-${p2Id}`
 

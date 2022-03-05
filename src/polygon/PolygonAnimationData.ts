@@ -250,13 +250,16 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
       case 'Line3': return 'Line4'
       // case 'Line4': return 'Initial'
       case 'Line4': return 'Final'
+      case 'Final': return 'Final'
       // case 'Final': return 'Initial'
       default: return null
     }
   }()
 
   if (!state) return data // Should never happen
-  if (data.state === state) return data
+  // Ignore updates until we're at the 'permanent' final stage
+  // Once final, we will still add noise
+  if (data.state === state && state !== 'Final') return data
 
   let { points, logoLines } = data
 
@@ -290,12 +293,15 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
   }
 
   // Apply noise to non anchored points
-  points = points.map(point => {
-    if (point.logo?.anchored) {
-      return point
-    }
-    return noisePoint(point, data)
-  })
+  // Ignore for initial as that includes many line transformations
+  if (state !== 'Initial') {
+    points = points.map(point => {
+      if (point.logo?.anchored) {
+        return point
+      }
+      return noisePoint(point, data)
+    })
+  }
 
   return { ...data, state, logoLines, points }
 }
