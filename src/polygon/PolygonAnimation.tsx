@@ -3,11 +3,11 @@ import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
-import { createGrid, PointBasic, PointData, updatePoints } from './PolygonAnimationData';
+import { createGrid, LineRef, LogoLine, PointBasic, PointData, updatePoints } from './PolygonAnimationData';
 
 const autoProgress = false
-// const springAnimDuration = 2000
-const springAnimDuration = 600
+const springAnimDuration = 2000
+// const springAnimDuration = 600
 
 type WindowSize = {
   readonly width: number,
@@ -130,13 +130,76 @@ function AnimationGrid(props: AnimationGridProps) {
   const marginBoundX = props.marginXRatio * grid.svgSize - 5
   const marginBoundY = props.marginYRatio * grid.svgSize - 5
 
-  console.log(marginBoundX, marginBoundY)
-
   function shouldDraw(point: PointBasic): boolean {
     return point.x > marginBoundX
       && grid.svgSize - point.x > marginBoundX
       && point.y > marginBoundY
       && grid.svgSize - point.y > marginBoundY
+  }
+
+  function Path(id: string, points: PointBasic[], className?: string) {
+    let d = ""
+    for (const p of points) {
+      if (d.length === 0) d = `M${p.x} ${p.y}`
+      else d = `${d} L${p.x} ${p.y}`
+    }
+
+    const key = `path-${id}`
+
+    const lineProps = {
+      key,
+      className: key.concat(className ? ' ' + className : ''),
+      d
+    }
+
+    // return null
+    return <path {...lineProps} />
+  }
+
+  function Point(point: PointData) {
+    const p = drawPoint(point)
+
+    if (!shouldDraw(p)) return null
+
+    const key = `circle-${point.id}`
+
+    const circleProps = {
+      key,
+      className: key,
+      // className: point.lineState ?? undefined,
+      cx: p.x,
+      cy: p.y,
+    }
+
+    return <circle {...circleProps} />
+  }
+
+  function Line(line: LineRef) {
+    const { p1Id, p2Id } = line
+    const point1 = grid.points[p1Id]
+    const point2 = grid.points[p2Id]
+    const p1 = drawPoint(point1)
+    const p2 = drawPoint(point2)
+
+    if (!shouldDraw(p1) && !shouldDraw(p2)) return null
+
+    // const lineState = point1.logo?.lineState === point2.logo?.lineState ? point1.logo?.lineState : null
+
+    const key = `line-${p1Id}-${p2Id}`
+
+    const lineProps = {
+      key,
+      className: key,
+      d: `M${p1.x} ${p1.y} L${p2.x} ${p2.y}`,
+    }
+
+    return <path {...lineProps} />
+  }
+
+  function LogoLine(logoLine: LogoLine) {
+    const { lineState, anchored, points } = logoLine
+    const path = points.map(p => anchored ? p.anchor : drawPoint(grid.points[p.id]))
+    return Path(`logo-${lineState}`, path, lineState.concat(anchored ? ' anchored' : ''))
   }
 
   return (
@@ -148,40 +211,30 @@ function AnimationGrid(props: AnimationGridProps) {
       }
     }}>
       {
-        grid.points.map((point, i) => {
-          const p = drawPoint(point)
-
-          if (!shouldDraw(p)) return null
-
-          const circleProps = {
-            key: `circle${i}`,
-            className: point.lineState ?? undefined,
-            cx: p.x,
-            cy: p.y,
-          }
-
-          return <circle {...circleProps} />
-        })
+        grid.points.map(Point)
       }
       {
-        grid.paths.map((line, i) => {
-          const [p1Id, p2Id] = line
-          const point1 = grid.points[p1Id]
-          const point2 = grid.points[p2Id]
-          const p1 = drawPoint(point1)
-          const p2 = drawPoint(point2)
-
-          if (!shouldDraw(p1) && !shouldDraw(p2)) return null
-
-          const lineState = point1.lineState === point2.lineState ? point1.lineState : null
-
+        grid.paths.map(Line)
+      }
+      {
+        Array.from(grid.logoLines.values(), LogoLine)
+      }
+      {/* {
+        grid.lines.map((l, i) => {
+          const { p1, p2 } = l
           const lineProps = {
-            key: `line${i}`,
-            className: lineState ?? undefined,
+            key: `test-line-${i}`,
             d: `M${p1.x} ${p1.y} L${p2.x} ${p2.y}`,
+            className: 'test'
           }
 
           return <path {...lineProps} />
+        })
+      } */}
+      {
+        grid.debug?.map((data, i) => {
+          const path = data.map(id => drawPoint(grid.points[id]))
+          return Path(`debug-${i}`, path, 'debug')
         })
       }
     </svg>

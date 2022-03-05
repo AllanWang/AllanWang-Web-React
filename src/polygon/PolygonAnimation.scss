@@ -44,7 +44,7 @@ svg.svg-grid {
     }
 
     // @include logo {
-      // r: 0.15;
+    // r: 0.15;
     // }
   }
   line,
@@ -54,6 +54,17 @@ svg.svg-grid {
     @extend %animatable;
     stroke: var(--svg-color);
     stroke-width: 0.1;
+    fill: none;
+
+    &.test {
+      stroke: #f0f;
+      stroke-width: 0.5;
+    }
+    &.debug {
+      stroke: #0f0;
+      stroke-opacity: 1 !important;
+      stroke-width: 0.5;
+    }
 
     @include logoInner {
       stroke: var(--svg-accent-color);
