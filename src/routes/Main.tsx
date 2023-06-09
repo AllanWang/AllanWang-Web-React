@@ -1,13 +1,13 @@
 import { Container, Box, Divider, Typography } from "@mui/material";
 import { AllanHelmet } from "../common/Helmet";
-import PolygonAnimation from '../polygon/PolygonAnimation';
+import PolygonAnimation from '../polygon/PolygonAnimationSpring';
 
 export default function Main() {
   return (
     <Box>
       <AllanHelmet theme="dark_cyan"/>
       <PolygonAnimation />
-      <Container maxWidth="md" sx={{ py: 10, minHeight: 800 }}>
+      <Container maxWidth="md" sx={{ py: 10, minHeight: '100vh' }}>
         <Typography variant="h3">
           Hello World
         </Typography>
