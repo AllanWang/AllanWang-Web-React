@@ -15,7 +15,6 @@ import { Toolbar } from '@mui/material';
 import Main from './routes/Main';
 import Projects from './routes/Projects';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { AllanHelmet } from './common/Helmet';
 
 ReactDOM.render(
   <React.StrictMode>

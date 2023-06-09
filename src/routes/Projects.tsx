@@ -8,7 +8,6 @@ import Typography from "@mui/material/Typography";
 import materialGlassBanner from "../dev/images/material_glass_banner.jpg";
 import frostBanner from "../dev/images/frost_banner.jpg";
 import kauBanner from "../dev/images/kau.jpg";
-import { Helmet } from "react-helmet-async";
 import { AllanHelmet } from "../common/Helmet";
 
 type ProjectCardProps = {
