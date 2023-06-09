@@ -14,35 +14,40 @@ import NotFound from './routes/NotFound';
 import { Toolbar } from '@mui/material';
 import Main from './routes/Main';
 import Projects from './routes/Projects';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
+import { AllanHelmet } from './common/Helmet';
 
 ReactDOM.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-          }}
-        >
-          <CssBaseline />
-          <Header />
-          <Toolbar id="scroll_to_top" /> {/* For spacing and scroll to top */}
-          <main>
-            <Routes>
-              <Route path="/" element={<Main />} />
-              <Route path="dev" element={<Projects />} />
-              <Route path="notes" element={<NotesIndex />} />
-              <Route path="notes/:courseId" element={<NotesCourseMainRoute />} />
-              <Route path="notes/:courseId/:noteId" element={<NotesCourseSegmentRoute />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </Box>
-      </ThemeProvider>
-    </BrowserRouter>
+    <HelmetProvider>
+      <Helmet defaultTitle="Allan Wang"/>
+      <BrowserRouter>
+        <ThemeProvider theme={theme}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '100vh',
+            }}
+          >
+            <CssBaseline />
+            <Header />
+            <Toolbar id="scroll_to_top" /> {/* For spacing and scroll to top */}
+            <main>
+              <Routes>
+                <Route path="/" element={<Main />} />
+                <Route path="dev" element={<Projects />} />
+                <Route path="notes" element={<NotesIndex />} />
+                <Route path="notes/:courseId" element={<NotesCourseMainRoute />} />
+                <Route path="notes/:courseId/:noteId" element={<NotesCourseSegmentRoute />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </Box>
+        </ThemeProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );

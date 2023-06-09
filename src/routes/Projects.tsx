@@ -8,6 +8,8 @@ import Typography from "@mui/material/Typography";
 import materialGlassBanner from "../dev/images/material_glass_banner.jpg";
 import frostBanner from "../dev/images/frost_banner.jpg";
 import kauBanner from "../dev/images/kau.jpg";
+import { Helmet } from "react-helmet-async";
+import { AllanHelmet } from "../common/Helmet";
 
 type ProjectCardProps = {
   image?: string
@@ -134,6 +136,7 @@ const sideProjects: ProjectList = [
 export default function Projects() {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
+      <AllanHelmet title="Projects" theme="green"/>
       <ProjectGroup projects={mainProjects} />
       <Divider sx={{ my: 4 }} />
       <ProjectGroup projects={sideProjects} />

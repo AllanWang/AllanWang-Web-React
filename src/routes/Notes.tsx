@@ -14,6 +14,7 @@ import rehypeHighlight from 'rehype-highlight';
 import ocaml from 'highlight.js/lib/languages/ocaml';
 import 'highlight.js/scss/github.scss';
 import './Notes.scss';
+import { AllanHelmet } from "../common/Helmet";
 
 const rawBaseUrl = "https://raw.githubusercontent.com/AllanWang/McGill-Public/dev"
 const absoluteUrlRegex = "(?:^[a-z][a-z0-9+.-]*:|//)"
@@ -88,6 +89,7 @@ function Notes(props: NotesProps) {
 
   return (
     <Box sx={{ my: 4, mx: 4 }}>
+      <AllanHelmet title={props.info.subpath} />
       <ReactMarkdown children={mdText}
         linkTarget={baseUrl}
         remarkPlugins={[remarkMath, remarkGfm]}
@@ -104,6 +106,7 @@ function Notes(props: NotesProps) {
 export function NotesIndex() {
   return (
     <Container maxWidth="md" sx={{ py: 2 }}>
+      <AllanHelmet title="Notes" />
       <TableContainer >
         <Table >
           <TableBody>
