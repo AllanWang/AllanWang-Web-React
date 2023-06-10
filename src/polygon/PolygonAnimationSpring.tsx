@@ -29,7 +29,7 @@ export type SvgAnimatedProps = PointAnimatedProps | LineAnimatedProps
 export default function PolygonAnimation() {
 
     return (
-        <Box sx={{
+        <Box component="div" sx={{
             width: '100vw',
             height: '100vh',
             position: 'relative',
@@ -125,7 +125,7 @@ function AnimationGrid() {
     });
 
     return (
-        <Box sx={{
+        <Box component="div" sx={{
             height: '100vmax',
             width: '100vmax',
             position: 'absolute',

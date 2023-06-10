@@ -24,7 +24,7 @@ root.render(
       <Helmet defaultTitle="Allan Wang" />
       <BrowserRouter>
         <ThemeProvider theme={theme}>
-          <Box
+          <Box component="div"
             sx={{
               display: 'flex',
               flexDirection: 'column',

@@ -94,13 +94,13 @@ export default function PolygonAnimation() {
   }
 
   return (
-    <Box ref={containerRef} sx={{
+    <Box component="div" ref={containerRef} sx={{
       // width: `${refWidth}px`,
       height: `${refHeight}px`,
       overflow: 'hidden'
     }}>
       {/* <p>ViewPort {size.width}px / {size.height}px; Container {refWidth}px / {refHeight}px</p> */}
-      <Box sx={{
+      <Box component="div" sx={{
         marginX: `${marginX}px`,
         marginY: `${marginY}px`,
         width: `${svgSizePx}px`,
