@@ -55,7 +55,8 @@ function drawPoint(point: PointData): PointBasic {
       return logo.anchor
     }
   }
-  return point.draw ?? point.orig
+  // return point.draw ?? point.orig
+  return point.orig
 }
 
 /**
