@@ -1,9 +1,9 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, PointMaterial, Stats } from '@react-three/drei'
+import { OrbitControls, MeshDistortMaterial, Stats, GradientTexture } from '@react-three/drei'
 import { Box } from '@mui/material'
-import { BufferGeometry, DynamicDrawUsage, AdditiveBlending, Vector3, NormalBufferAttributes, Points, LineSegments } from 'three'
+import THREE, { BufferGeometry, DynamicDrawUsage, AdditiveBlending, Vector3, NormalBufferAttributes, Points, LineSegments, Mesh, Material, MathUtils } from 'three'
 import { useMemo, useRef, useLayoutEffect } from 'react';
-import { useSprings } from 'react-spring';
+import { useSprings, animated, useTrail } from '@react-spring/three';
 
 type ParticleData = {
     velocity: Vector3
@@ -65,7 +65,7 @@ function createPolygonData(data: PolygonThreeInitData): PolygonThreeData {
 }
 
 const initData: PolygonThreeInitData = {
-    cameraPos: new Vector3(0, 0, -30),
+    cameraPos: new Vector3(0, 0, 30),
     particleCount: 200,
     velocityFactor: 2,
     minDistanceForLine: 10,
@@ -87,6 +87,16 @@ function MovingPolygon(props: PolygonThreeInitData) {
 
     const [springs, api] = useSprings(particlePositions.length, (i) => ({ x: particlePositions[i] }), [initData])
 
+    // useLayoutEffect(() => {
+    //     const timer = setInterval(() => {
+    //         api.start((i) => {
+    //             if (Math.random() > 0.5) return null
+    //             return { x: Math.random() * 5, config: { friction: 200 } }
+    //         }
+    //      )
+    //     }, 1000)
+    // }, [])
+
     useFrame((_, delta) => {
         vertexPos = 0
         colorPos = 0
@@ -98,16 +108,16 @@ function MovingPolygon(props: PolygonThreeInitData) {
             particlePositions[i * 3 + 1] += particle.velocity.y * delta
             particlePositions[i * 3 + 2] += particle.velocity.z * delta
 
-            // springs.forEach(({x}, i) => {
-            //     // particlePositions[i] = 
-            // })
+            springs.forEach((s, i) => {
+                particlePositions[i] = s.x.get()
+            })
 
-            if (Math.abs(particlePositions[i * 3]) > maxX)
-                particle.velocity.x = -particle.velocity.x;
-            if (Math.abs(particlePositions[i * 3 + 1]) > maxY)
-                particle.velocity.y = -particle.velocity.y;
-            if (Math.abs(particlePositions[i * 3 + 2]) > maxZ)
-                particle.velocity.z = -particle.velocity.z;
+            // if (Math.abs(particlePositions[i * 3]) > maxX)
+            //     particle.velocity.x = -particle.velocity.x;
+            // if (Math.abs(particlePositions[i * 3 + 1]) > maxY)
+            //     particle.velocity.y = -particle.velocity.y;
+            // if (Math.abs(particlePositions[i * 3 + 2]) > maxZ)
+            //     particle.velocity.z = -particle.velocity.z;
 
             for (let j = i + 1; j < particleCount; j++) {
                 const otherParticle = particleData[j]
@@ -182,6 +192,100 @@ function MovingPolygon(props: PolygonThreeInitData) {
     )
 }
 
+const points = new Float32Array([-15, 15, 0, 0, 15, 15, -13.5, 15, 0, 0, 0, 0])
+
+function MovingPlane() {
+
+    const sideSize = 100
+    const sideCount = 20
+
+    const meshRef = useRef<Mesh<BufferGeometry<NormalBufferAttributes>>>(null)
+    const distortRef = useRef(null)
+
+    // const [trails, api] = useTrail(
+    //     sideSize * sideSize,
+    //     () => ({
+    //         value: 0
+    //     }),
+    //     []
+    // )
+
+    useLayoutEffect(() => {
+        const positions = meshRef.current!.geometry.attributes.position
+
+        let pos = 0
+
+        let offset = (positions.getX(1) - positions.getX(0)) / 2
+
+        for (let i = 0; i <= sideCount; i++) {
+            for (let j = 0; j <= sideCount; j++) {
+                pos = i * (sideCount + 1) + j
+                positions.setX(pos, positions.getX(pos) + i * offset - 30 / 4)
+            }
+        }
+
+        // positions.setX(0, -20)
+        // positions.setX(1, -20)
+        // positions.setX(2, -20)
+        // positions.setX(3, -20)
+
+        positions.needsUpdate = true
+
+        // setInterval(() => {
+        // api.start({ value: Math.random() * -10 })
+        // }, 1000)
+    }, [meshRef])
+
+    let pos = 0
+
+    // useFrame(() => {
+    //     const positions = meshRef.current!.geometry.attributes.position
+
+    //     for (let i = 0; i <= sideCount; i++) {
+    //         for (let j = 0; j <= sideCount; j++) {
+    //             pos = i * (sideCount + 1) + j
+    //             positions.setZ(pos, trails[i + j].value.get())
+    //         }
+    //     }
+
+    //     positions.needsUpdate = true
+    // })
+
+    const hovered = true
+
+    useFrame(() => {
+        const target = distortRef.current as any
+        target.distort = MathUtils.lerp(target.distort, hovered ? 0.2 : 0, hovered ? 0.05 : 0.01)
+    })
+
+    return (
+        <group>
+            <mesh ref={meshRef}>
+                <planeGeometry args={[sideSize, sideSize, sideCount, sideCount]}>
+                    {/* <bufferAttribute
+                        attach="attributes-position"
+                        array={points}
+                        count={points.length / 3}
+                        usage={DynamicDrawUsage}
+                        itemSize={3}
+                    /> */}
+                </planeGeometry>
+
+                <MeshDistortMaterial
+                    wireframe
+                    speed={1}
+                    distort={0.2}
+                    ref={distortRef}
+                    color={"green"}
+                >
+                    {/* <GradientTexture stops={[0, 0.8, 1]} colors={['#e63946', '#f1faee', '#a8dadc']} size={100} /> */}
+                </MeshDistortMaterial>
+                {/* <meshBasicMaterial wireframe color="green" /> */}
+            </mesh>
+        </group>
+    )
+}
+
 export default function PolygonAnimation() {
 
     return (
@@ -190,8 +294,9 @@ export default function PolygonAnimation() {
             width: "100vw"
         }}>
             <Canvas camera={{ position: initData.cameraPos }}>
-                {/* <ambientLight intensity={0.5} /> */}
-                <MovingPolygon {...initData} />
+                <ambientLight intensity={0.5} />
+                <MovingPlane />
+                {/* <MovingPolygon {...initData} /> */}
                 <OrbitControls />
                 <Stats showPanel={0} className="stats" />
             </Canvas>
