@@ -92,7 +92,7 @@ function NavAppBar() {
   const theme = useTheme();
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box component="div" sx={{ flexGrow: 1 }}>
       <HideOnScroll>
         <AppBar elevation={2} position="fixed" sx={{
           color: "text.primary",
@@ -101,7 +101,7 @@ function NavAppBar() {
           bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[900]
         }}>
           <Toolbar>
-            <Box sx={{ px: 2 }}>
+            <Box component="div" sx={{ px: 2 }}>
               <Logo animated={true} logoColor={theme.palette.primary.main} secondaryColor={theme.palette.text.secondary} />
             </Box>
 
@@ -114,7 +114,7 @@ function NavAppBar() {
               MUI
             </Typography> */}
 
-            <Box sx={{ flexGrow: 1, display: 'flex' }}>
+            <Box component="div" sx={{ flexGrow: 1, display: 'flex' }}>
               {
                 pages.map((page) => (
                   <AppBarItem {...page} key={page.link} />

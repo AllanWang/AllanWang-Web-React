@@ -19,7 +19,8 @@ const logoOffsetY = (svgSize - logoSegH) / 2
 // const logoSize = svgSize - Math.min(logoOffsetX, logoOffsetY) * 2
 
 const noiseRangeMultiplier = 0.5 // Multiplier needs to be under 1 to avoid overlap
-const noiseChance = 0.5 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
+const noiseLogoRangeMultiplier = 0.1
+const noiseChance = 0.8 // Odds of adding noise on redraw; for the sake of performance, we don't add noise to all points [0, 1] 
 const logoPointDistanceSquared = 10
 
 /*
@@ -51,7 +52,7 @@ type PointLogoInfo = {
 export type PointData = {
   readonly id: number
   readonly orig: PointBasic
-  readonly draw?: PointBasic | null
+  readonly delta: PointBasic
   // Indication of logo portion, if the point is a part of one of the lines
   readonly logo?: PointLogoInfo
   readonly ignore?: boolean
@@ -99,12 +100,8 @@ export type GridData = {
   readonly points: PointData[]
   readonly paths: LineRef[]
   // readonly lines: LineData[]
-  readonly logoLines: Map<string, LogoLine>
+  readonly logoLines: LogoLine[]
 } & GridInfo
-
-function transformMap<K, V, R>(map: Map<K, V>, transform: (key: K, value: V) => R): Map<K, R> {
-  return new Map(Array.from(map.entries(), ([k, v]) => [k, transform(k, v)]))
-}
 
 function roundPoint(point: PointBasic): PointBasic {
   let { x, y } = point
@@ -118,15 +115,17 @@ function roundPoint(point: PointBasic): PointBasic {
  */
 function noisePoint(point: PointData, info: GridInfo): PointData {
   // Noise chance not met
-  if (Math.random() > noiseChance) return point
-  const dNoise = info.noiseRange * noiseRangeMultiplier
-  let { x, y } = point.orig
-  x += rnd(-dNoise, dNoise)
-  y += rnd(-dNoise, dNoise)
-  const draw = roundPoint({ x, y })
-  return { ...point, draw }
+  if (Math.random() > noiseChance) return { ...point, delta: { x: 0, y: 0 } }
+  const dNoise = info.noiseRange * (point.logo ? noiseLogoRangeMultiplier : noiseRangeMultiplier)
+
+  return { ...point, delta: roundPoint({ x: rnd(-dNoise, dNoise), y: rnd(-dNoise, dNoise) }) }
 }
 
+export function drawPoint(point: PointData): PointBasic {
+  const base = point.logo?.anchored ? point.logo.anchor : point.orig
+  if (!point.delta) return base
+  return { x: base.x + point.delta.x, y: base.y + point.delta.y }
+}
 
 function lineData(data: { p1: PointBasic, p2: PointBasic }): LineData {
   const { p1, p2 } = data
@@ -265,10 +264,11 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
 
   if (state === 'Initial') {
     // Remove all anchored flags
-    logoLines = transformMap(data.logoLines, (_k, v) => {
-      const { anchored, ...rest } = v
+    logoLines = logoLines.map(line => {
+      const { anchored, ...rest } = line
       return rest
     })
+
     points = points.map(point => {
       const { logo, ...rest } = point
       if (logo) {
@@ -278,27 +278,26 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
       return point
     })
   } else {
-    const updateLine = data.logoLines.get(state)
-    if (updateLine) {
-      // Anchor line
-      logoLines = transformMap(data.logoLines, (_k, v) => v.lineState === updateLine.lineState ? { ...v, anchored: true } : v)
-      // Anchor points used in logo
-      points = points.map(point => {
-        if (point.logo?.lineState === state) {
-          return { ...point, logo: { ...point.logo, anchored: true } }
-        }
-        return point
-      })
-    }
+
+    // Update anchor line
+    logoLines = logoLines.map(line => {
+      return line.lineState == state ? { ...line, anchored: true } : line
+    })
+
+
+    // Update anchor points used in logo
+    points = points.map(point => {
+      if (point.logo?.lineState === state) {
+        return { ...point, logo: { ...point.logo, anchored: true } }
+      }
+      return point
+    })
   }
 
-  // Apply noise to non anchored points
+  // Apply noise
   // Ignore for initial as that includes many line transformations
   if (state !== 'Initial') {
     points = points.map(point => {
-      if (point.logo?.anchored) {
-        return point
-      }
       return noisePoint(point, data)
     })
   }
@@ -309,7 +308,7 @@ export function updatePoints(data: GridData, newState: GridState | null): GridDa
 /**
  * Generates square grid of points, where each edge is size {@link rowCount}
  */
-function createPointsUniform(rowCount: number = 25): GridPointData {
+function createPointsUniform(rowCount: number = 20): GridPointData {
   const delta = svgSize / (rowCount - 1)
   const points: PointBasic[] = []
   for (let i = 0; i < rowCount; i++) {
@@ -357,7 +356,7 @@ export function createGrid(): GridData {
   const info = pointInfo.info
 
   let points: PointData[] = pointInfo.points
-    .map((p: PointBasic, id: number) => ({ id, orig: roundPoint(p) }))
+    .map((p: PointBasic, id: number) => ({ id, orig: roundPoint(p), delta: { x: 0, y: 0 } }))
     .map(p => noisePoint(p, info))
 
   let paths: LineRef[] = []
@@ -497,7 +496,7 @@ export function createGrid(): GridData {
     ['Line4', { p1: { x: logoOffsetX + logoSegW * 3, y: logoOffsetY + logoSegH }, p2: { x: logoOffsetX + logoSegW * 4, y: logoOffsetY } }],
   ]
 
-  const logoLines = new Map(logoLineData.map(([k, v]) => [k, transformationLine(k, lineData(v))]))
+  const logoLines = logoLineData.map(([k, v]) => transformationLine(k, lineData(v)))
   // const lines = logoLineData.map(([, v]) => lineData(v))
 
   // Clean up; remove points and paths used in logo to avoid overdraw
