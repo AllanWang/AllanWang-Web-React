@@ -1,9 +1,10 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, MeshDistortMaterial, Stats, GradientTexture } from '@react-three/drei'
+import { OrbitControls, Stats, GradientTexture } from '@react-three/drei'
 import { Box } from '@mui/material'
 import THREE, { BufferGeometry, DynamicDrawUsage, AdditiveBlending, Vector3, NormalBufferAttributes, Points, LineSegments, Mesh, Material, MathUtils } from 'three'
 import { useMemo, useRef, useLayoutEffect } from 'react';
 import { useSprings, animated, useTrail } from '@react-spring/three';
+import { MeshDistortMaterial } from '../drei/MeshDistortMaterial';
 
 type ParticleData = {
     velocity: Vector3
