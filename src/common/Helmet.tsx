@@ -26,10 +26,10 @@ function title(props: AllanHelmetProps): string {
 
 export function AllanHelmet(props: AllanHelmetProps) {
     const theme = props.theme ?? "dark_cyan"
-    
+
     return (
         <Helmet title={title(props)} >
-            <link rel="shortcut icon" href={`${process.env.PUBLIC_URL}/favicons/favicon-${themeHex(theme)}.ico`} />
+            {/* <link rel="shortcut icon" href={new URL(`./favicons/favicon-${themeHex(theme)}.ico`, import.meta.url).href} /> */}
         </Helmet>
     )
 }
