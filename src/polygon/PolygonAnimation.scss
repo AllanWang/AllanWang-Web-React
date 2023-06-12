@@ -1,84 +1,17 @@
-@mixin logoInner {
-  &.Line2,
-  &.Line3 {
-    @content;
-  }
-}
-
-@mixin logoOuter {
-  &.Line1,
-  &.Line4 {
-    @content;
-  }
-}
-
-@mixin logo {
-  @include logoInner {
-    @content;
-  }
-
-  @include logoOuter {
-    @content;
-  }
-}
-
-/*
- * Ideas
- * - change data to base, noise, mouse delta; track deltas on mouse over 
- * - keep points when animating to logo; create invisible ones that show up afterwards
- * - on that note, maybe don't move lines over, or fade the lines out and somehow allow for translucent strokes
- * -- todo that, consider pre computing which points are relevant, and then drawing all logo point edges with a single path?
- */
-
 svg.svg-grid {
   // content-visibility: auto;
 
-  circle {
-    @extend %animatable;
-    fill: var(--svg-color);
-    r: 0.1;
-    opacity: 0.7;
-
-    @include logoInner {
-      fill: var(--svg-accent-color);
-    }
-  }
-  line,
-  path {
+  line {
     opacity: 0.1;
-    @extend %animatable;
     stroke: var(--svg-color);
     stroke-width: 0.1;
     fill: none;
     stroke-linecap: round;
-
-    &.anchored {
-      @include logoInner {
-        stroke: var(--svg-accent-color);
-      }
-      @include logo {
-        stroke-width: 0.8;
-      }
-    }
   }
 
-  circle {
-    &.anchored {
-      opacity: 0.1;
-    }
-  }
-
-  line,
+  // Ignore other styles as they are animated via springs
   path {
-    &.anchored {
-      @include logo {
-        opacity: 0.5;
-      }
-    }
+    fill: none;
+    stroke-linecap: round;
   }
-}
-
-%animatable {
-  transition: var(--svg-anim-duration) ease-in;
-  -webkit-transition: var(--svg-anim-duration);
 }
