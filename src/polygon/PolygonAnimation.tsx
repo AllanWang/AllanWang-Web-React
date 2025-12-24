@@ -3,10 +3,12 @@ import { hexToRgb, useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
 import { useRef } from 'react';
 import './PolygonAnimation.scss';
+import { useSprings, animated, AnimationProps } from 'react-spring'
 import { createGrid, LineRef, LogoLine, PointBasic, PointData, updatePoints } from './PolygonAnimationData';
 
 const autoProgress = true
-const springAnimDuration = 1200
+const springAnimDuration = 3000
+const logoSpringAnimDuration = 1000 // should be smaller than springAnimDuration
 
 type WindowSize = {
   readonly width: number,
@@ -121,9 +123,68 @@ function AnimationGrid(props: AnimationGridProps) {
     // We still want timer to cancel in case user requests an animation restart
     const timer = setInterval(() => {
       dispatchGrid(null)
-    }, springAnimDuration * 2);
+    }, springAnimDuration);
     return () => clearTimeout(timer);
   }, [grid.state])
+
+  function pointSpring(index: number): PointBasic & AnimationProps {
+    const point = grid.points[index]
+    const p = drawPoint(point)
+    return {
+      x: p.x,
+      y: p.y,
+      config: {
+        duration: point.logo ? logoSpringAnimDuration : springAnimDuration,
+        round: 0.01
+      }
+    }
+  }
+
+  const [springs] = useSprings(
+    grid.points.length,
+    pointSpring,
+    [grid]
+  )
+
+  function pathD(points: PointBasic[]): string {
+    let d = ""
+    for (const p of points) {
+      if (d.length === 0) d = `M${p.x} ${p.y}`
+      else d = `${d} L${p.x} ${p.y}`
+    }
+    return d
+  }
+
+  const logoLineValues = Array.from(grid.logoLines.values())
+
+  type LogoLineSpring = {
+    d: string,
+    strokeWidth: number,
+    stroke: string,
+    opacity: number,
+  }
+
+  function logoLineSpring(index: number): LogoLineSpring & AnimationProps {
+    const logoLine = logoLineValues[index]
+    const { lineState, anchored, points } = logoLine
+    const path = points.map(p => anchored ? p.anchor : drawPoint(grid.points[p.id]))
+    return {
+      d: pathD(path),
+      strokeWidth: anchored ? 0.8 : 0.1,
+      stroke: anchored && (lineState === 'Line2' || lineState === 'Line3') ? props.colorAccent : props.color,
+      opacity: anchored ? 0.5 : 0.1,
+      config: {
+        duration: logoSpringAnimDuration,
+        round: 0.01
+      }
+    }
+  }
+
+  const [logoSprings] = useSprings(
+    logoLineValues.length,
+    logoLineSpring,
+    [grid]
+  )
 
   const style: {} = {
     '--svg-color': props.color,
@@ -141,74 +202,49 @@ function AnimationGrid(props: AnimationGridProps) {
       && grid.svgSize - point.y > marginBoundY
   }
 
-  function Path(id: string, points: PointBasic[], className?: string) {
-    let d = ""
-    for (const p of points) {
-      if (d.length === 0) d = `M${p.x} ${p.y}`
-      else d = `${d} L${p.x} ${p.y}`
-    }
-
-    const key = `path-${id}`
-
-    const lineProps = {
-      key,
-      className: key.concat(className ? ' ' + className : ''),
-      d
-    }
-
-    // return null
-    return <path {...lineProps} />
-  }
-
-  function Point(point: PointData) {
-    if (point.ignore) return null
-
-    const p = drawPoint(point)
-
-    if (!shouldDraw(p)) return null
-
-    const key = `circle-${point.id}`
-
-    const circleProps = {
-      key,
-      className: key.concat(point.logo?.anchored ? ' anchored' : ''),
-      cx: p.x,
-      cy: p.y,
-    }
-
-    return <circle {...circleProps} />
-  }
-
   function Line(line: LineRef) {
     if (line.ignore) return null
 
     const { p1Id, p2Id } = line
-    const point1 = grid.points[p1Id]
-    const point2 = grid.points[p2Id]
-    const p1 = drawPoint(point1)
-    const p2 = drawPoint(point2)
 
-    if (!shouldDraw(p1) && !shouldDraw(p2)) return null
+    const p1 = springs[p1Id]
+    const p2 = springs[p2Id]
+    if (!shouldDraw({ x: p1.x.get(), y: p1.y.get() }) && !shouldDraw({ x: p2.x.get(), y: p2.y.get() })) return null
 
     const key = `line-${p1Id}-${p2Id}`
 
     const lineProps = {
       key,
       className: key,
-      d: `M${p1.x} ${p1.y} L${p2.x} ${p2.y}`,
+      x1: p1.x,
+      y1: p1.y,
+      x2: p2.x,
+      y2: p2.y,
     }
 
-    return <path {...lineProps} />
+    return <animated.line {...lineProps} />
   }
 
-  function LogoLine(logoLine: LogoLine) {
-    const { lineState, anchored, points } = logoLine
-    const path = points.map(p => anchored ? p.anchor : drawPoint(grid.points[p.id]))
-    return Path(`logo-${lineState}`, path, lineState.concat(anchored ? ' anchored' : ''))
+  function LogoLine(logoLine: LogoLine, i: number) {
+    const s = logoSprings[i]
+    const { lineState, anchored } = logoLine
+
+    const key = `logo-${lineState}`
+
+    const pathProps = {
+      key,
+      className: key.concat(anchored ? ' anchored' : ''),
+      d: s.d,
+      strokeWidth: s.strokeWidth,
+      stroke: s.stroke,
+      opacity: s.opacity,
+    }
+
+    return <animated.path {...pathProps} />
   }
 
   return (
-    <svg style={style} className="svg-grid" viewBox={`0 0 ${grid.svgSize} ${grid.svgSize}`} onClick={(e) => {
+    <animated.svg style={style} className="svg-grid" viewBox={`0 0 ${grid.svgSize} ${grid.svgSize}`} onClick={(e) => {
       if (grid.state === 'Final' && e.detail === 1) {
         dispatchGrid('Initial')
       } else if (!autoProgress) {
@@ -216,14 +252,12 @@ function AnimationGrid(props: AnimationGridProps) {
       }
     }}>
       {
-        grid.points.map(Point)
-      }
-      {
         grid.paths.map(Line)
       }
       {
         Array.from(grid.logoLines.values(), LogoLine)
       }
-    </svg>
+
+    </animated.svg>
   )
 }

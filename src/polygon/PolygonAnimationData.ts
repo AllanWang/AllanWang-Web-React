@@ -34,6 +34,7 @@ export type PointBasic = {
 export type PointLogoTransformation = {
   readonly id: number
   readonly anchor: PointBasic
+  readonly corner?: boolean
 }
 
 export type LogoLine = {
@@ -46,6 +47,7 @@ type PointLogoInfo = {
   readonly lineState: LineState
   readonly anchor: PointBasic
   readonly anchored?: boolean
+  readonly corner?: boolean
 }
 
 export type PointData = {
@@ -465,7 +467,7 @@ export function createGrid(): GridData {
       // Therefore, we have the possibility of clashing points,
       // and we want to prioritize the earlier line transformations.
       if (!pointsInLogo.has(info.id))
-        pointsInLogo.set(info.id, { lineState, anchor: info.anchor })
+        pointsInLogo.set(info.id, { lineState, anchor: info.anchor, corner: info.corner })
     }
 
     let curr = {
@@ -475,15 +477,21 @@ export function createGrid(): GridData {
       anchor: line.p1
     }
     let next = nextTransformationPoint(curr, line)
+    let first = true
 
     while (next) {
-      add({ id: curr.id, anchor: curr.anchor })
+      if (first) {
+        first = false
+        add({ id: curr.id, anchor: curr.anchor, corner: true })
+      } else {
+        add({ id: curr.id, anchor: curr.anchor })
+      }
       curr = next
       next = nextTransformationPoint(curr, line)
     }
 
     // Anchor last point to line p2
-    add({ id: curr.id, anchor: line.p2 })
+    add({ id: curr.id, anchor: line.p2, corner: true })
     return {
       lineState,
       points: transformations
@@ -507,9 +515,9 @@ export function createGrid(): GridData {
     return info ? { ...p, logo: info } : p
   })
   paths = paths.map(p => {
-    const p1LineState = pointsInLogo.get(p.p1Id)?.lineState
-    const p2LineState = pointsInLogo.get(p.p2Id)?.lineState
-    const ignore = p1LineState && p1LineState === p2LineState
+    const p1 = pointsInLogo.get(p.p1Id)
+    const p2 = pointsInLogo.get(p.p2Id)
+    const ignore = p1?.lineState && p2?.lineState && (p1?.corner || p2?.corner || p1?.lineState === p2?.lineState)
     return ignore ? { ...p, ignore } : p
   })
 
