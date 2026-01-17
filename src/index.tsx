@@ -1,5 +1,4 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
@@ -14,15 +13,18 @@ import NotFound from './routes/NotFound';
 import { Toolbar } from '@mui/material';
 import Main from './routes/Main';
 import Projects from './routes/Projects';
+import { createRoot } from 'react-dom/client';
+
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 
-ReactDOM.render(
+const root = createRoot(document.getElementById('root') as HTMLElement);
+root.render(
   <React.StrictMode>
     <HelmetProvider>
-      <Helmet defaultTitle="Allan Wang"/>
+      <Helmet defaultTitle="Allan Wang" />
       <BrowserRouter>
         <ThemeProvider theme={theme}>
-          <Box
+          <Box component="div"
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -47,8 +49,7 @@ ReactDOM.render(
         </ThemeProvider>
       </BrowserRouter>
     </HelmetProvider>
-  </React.StrictMode>,
-  document.getElementById('root')
+  </React.StrictMode>
 );
 
 // If you want to start measuring performance in your app, pass a function

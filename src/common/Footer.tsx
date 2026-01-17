@@ -42,7 +42,7 @@ export default function Footer() {
         <Container maxWidth="sm">
           <Stack direction="row" alignItems="center">
             <Copyright />
-            <Box sx={{ flexGrow: 1 }} />
+            <Box component="div" sx={{ flexGrow: 1 }} />
             <Icon name="GitHub" icon={<GitHubIcon />} href="https://github.com/AllanWang" />
             <Icon name="LinkedIn" icon={<LinkedInIcon />} href="https://www.linkedin.com/in/allanwang97" />
             <Icon name="Email" icon={<EmailOutlinedIcon />} href="mailto:me@allanwang.ca?Subject=Web%20Inquiry" />

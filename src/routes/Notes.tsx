@@ -88,7 +88,9 @@ function Notes(props: NotesProps) {
   };
 
   return (
-    <Box sx={{ my: 4, mx: 4 }}>
+    <Box component="div" sx={{  
+      mx: 4, my: 4 
+      }}>
       <AllanHelmet title={props.info.subpath} />
       <ReactMarkdown children={mdText}
         linkTarget={baseUrl}
